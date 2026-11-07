@@ -87,7 +87,7 @@
       <div class="wind-legend" id="windLegend" hidden><span class="wind-arrow" id="windArrow">➜</span><span id="windText"></span></div>
       <div class="hud" id="hud"></div>
       <div class="crack-pop" id="crackPop" hidden></div>
-      <div class="hint">왼쪽 드래그: 회전 · 우클릭: 그 지점으로 이동 · 오른쪽 드래그: 옆으로 이동 · 휠: 확대/축소 · 균열 점 클릭: 상세</div>
+      <div class="hint"><span class="hint-mouse">왼쪽 드래그: 회전 · 우클릭: 그 지점으로 이동 · 오른쪽 드래그: 옆으로 이동 · 휠: 확대/축소 · 균열 점 클릭: 상세</span><span class="hint-touch">한 손가락: 회전 · 두 손가락: 확대/축소 · 균열 점 탭: 상세</span></div>
     </div>
   </section>
 
@@ -913,6 +913,28 @@ function build3D(){
     });
     // 휠: 거리에 비례해 확대/축소 (가까울 땐 천천히, 멀 땐 빠르게)
     el.onwheel=e=>{if(e.target!==r.domElement)return;e.preventDefault();three.anim=null;three.dist=Math.max(three.minDist,Math.min(three.maxDist,three.dist*Math.exp(e.deltaY*.001)))};
+    // 터치(모바일): 한 손가락 = 회전, 두 손가락 = 확대/축소. 탭은 브라우저가 click으로 바꿔 줘서 균열·드론 선택은 그대로 동작
+    let t1=null, pinch=0;
+    const tDist = ts => Math.hypot(ts[0].clientX-ts[1].clientX, ts[0].clientY-ts[1].clientY);
+    r.domElement.addEventListener("touchstart", e => {
+      three.anim = null;
+      if(e.touches.length === 1){ t1 = {x:e.touches[0].clientX, y:e.touches[0].clientY}; pinch = 0; }
+      else if(e.touches.length === 2){ t1 = null; pinch = tDist(e.touches); }
+    }, {passive:true});
+    r.domElement.addEventListener("touchmove", e => {
+      e.preventDefault();                                     // 페이지 스크롤·확대 대신 3D 조작
+      if(e.touches.length === 1 && t1){
+        const x=e.touches[0].clientX, y=e.touches[0].clientY, dx=x-t1.x, dy=y-t1.y; t1={x,y};
+        three.ry-=dx*.01; three.rx=Math.max(-1.2,Math.min(1.4,three.rx+dy*.01));
+      }else if(e.touches.length === 2 && pinch){
+        const d = tDist(e.touches);
+        three.dist = Math.max(three.minDist, Math.min(three.maxDist, three.dist * pinch / d)); pinch = d;
+      }
+    }, {passive:false});
+    r.domElement.addEventListener("touchend", e => {
+      if(e.touches.length === 1){ t1 = {x:e.touches[0].clientX, y:e.touches[0].clientY}; pinch = 0; }   // 두 손가락 → 한 손가락: 튀지 않게 기준 다시 잡기
+      else if(!e.touches.length){ t1 = null; pinch = 0; }
+    });
     // 균열 점 고르기: 클릭(드래그 아님) → 상세 팝업, 빈 곳 클릭 → 팝업 닫기
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
     const pick = e => {

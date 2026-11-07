@@ -558,3 +558,15 @@ input:focus-visible{outline:none}
 @media (max-width: 860px){
   #dash .metric svg.thermo.thermo-h{display:block;width:100%;margin-top:6px}
 }
+
+/* ===== 3D 터치 조작 (모바일) ===== */
+#three canvas{touch-action:none}                 /* 손가락 동작을 페이지 스크롤·확대 대신 3D 조작으로 */
+.hint .hint-touch{display:none}
+#three .hint{pointer-events:none}                 /* 안내 문구 위를 눌러도 3D 조작이 되게 */
+@media (hover: none) and (pointer: coarse){       /* 터치 기기: 터치 안내로 바꿈 */
+  .hint .hint-mouse{display:none}
+  .hint .hint-touch{display:inline}
+}
+@media (max-width: 860px){
+  #three .hint,#three.dark .hint{display:block;left:10px;right:auto;bottom:14px;transform:none;white-space:normal;max-width:calc(100% - 110px);font-size:11px;line-height:1.35}
+}
