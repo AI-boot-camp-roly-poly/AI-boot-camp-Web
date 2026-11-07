@@ -1210,7 +1210,8 @@ const WIND_TIER = [   // 약함 · 보통 · 강함 · 매우 강함 (서버 win
   {count: 64,  thick: 1.9, opacity: .65, color: 0xffc2a8},
   {count: 90,  thick: 2.6, opacity: .75, color: 0xff8c7a},
 ];
-const REDUCE_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+// 3D 드론 순찰·프로펠러·바람은 화면 정보라 기기의 '움직임 줄이기'(휴대폰 절전 모드 등) 설정과 관계없이 항상 움직임
+const REDUCE_MOTION = false;
 function windTier(w){
   const k = {weak:0, moderate:1, strong:2, very_strong:3}[w.windLevel];
   return k ?? (w.windSpeedMs < 4 ? 0 : w.windSpeedMs < 9 ? 1 : w.windSpeedMs < 14 ? 2 : 3);
