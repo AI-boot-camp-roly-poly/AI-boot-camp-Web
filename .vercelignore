@@ -1,0 +1,8 @@
+# Vercel에 올리지 않을 파일 (공개 주소로 누구나 볼 수 있게 되므로 팀 내부 문서·사진은 제외)
+# 배포되는 것: index.html, style.css, theme.css, config.js, assets/
+*.md
+/1.jpg
+/2.jpg
+/3.jpg
+/4.jpg
+.claude

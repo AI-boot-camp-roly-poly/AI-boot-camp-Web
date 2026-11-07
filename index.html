@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrackTwin 관리자 (임시)</title>
+<link rel="icon" type="image/png" href="assets/knu-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="theme.css"><!-- 관제 대시보드 테마 (빼면 원래 디자인) -->
+</head>
+<body>
+<nav>
+  <h1 class="brand"><img src="assets/knu-mark-white.png" alt="KNU 강원대학교"><span>CrackTwin</span></h1>
+  <button data-p="dash" class="on"><span class="n">1</span>대시보드</button>
+  <button data-p="view"><span class="n">2</span>3D 시각화</button>
+  <button data-p="crack"><span class="n">3</span>균열 정보</button>
+  <button data-p="drone"><span class="n">4</span>드론 제어</button>
+  <!-- 역할: 게스트(조회만) / 관리자(드론 점검 포함) -->
+  <div class="role-box" id="roleBox">
+    <span class="role-tag guest" id="roleTag">확인 중…</span>
+    <button class="role-btn" id="roleBtn" hidden title="관리자 로그인">관리자</button>
+  </div>
+  <div class="status"><span class="dot" id="dot"></span><span id="stat">서버 확인 중…</span><small id="statAddr"></small></div>
+</nav>
+
+<!-- 관리자 로그인 (사이드바 버튼 또는 주소 끝 #admin) -->
+<div class="login-back" id="loginBack" hidden>
+  <form class="login-box" id="loginForm" autocomplete="on">
+    <h3>관리자 로그인</h3>
+    <p>드론 점검은 관리자만 할 수 있습니다. 비밀번호는 백엔드 담당에게 받으세요.</p>
+    <input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password" required>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-actions">
+      <button type="button" class="login-cancel" id="loginCancel">취소</button>
+      <button type="submit" class="login-ok" id="loginOk">로그인</button>
+    </div>
+  </form>
+</div>
+<main>
+
+  <!-- 1. 대시보드 -->
+  <section class="page on" id="dash">
+    <div class="site" id="site"></div>
+    <div class="hero" id="hero"><h2>점검 데이터 불러오는 중…</h2></div>
+    <div class="grid3">
+      <div class="card metric">
+        <div><h3>기온</h3><div class="big" id="temp">--<small>°C</small></div></div>
+        <!-- 가로 막대 온도계: 막대 길이·색이 기온에 따라 바뀜 (−20~40°C) -->
+        <svg class="thermo thermo-h" viewBox="0 0 220 48" aria-label="섭씨 온도 막대">
+          <rect class="th-track" x="6" y="6" width="208" height="12" rx="6"/>
+          <rect id="thermoFill" x="6" y="6" width="0" height="12" rx="6" fill="#22c55e"/>
+          <g id="thermoScale"></g>
+        </svg>
+      </div>
+      <div class="card metric">
+        <div><h3>습도</h3><div class="big" id="humi">--<small>%</small></div></div>
+        <svg viewBox="0 0 100 100" aria-label="습도 원그래프">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#dfe6ee" stroke-width="16"/>
+          <circle id="humiArc" cx="50" cy="50" r="38" fill="none" stroke="#243394" stroke-width="16"
+                  stroke-dasharray="0 238.76" transform="rotate(-90 50 50)"/>
+          <text id="humiTxt" x="50" y="56" text-anchor="middle" font-size="20" font-weight="800" fill="#111827">--</text>
+        </svg>
+      </div>
+      <div class="card metric">
+        <div><h3>풍속</h3><div class="big" id="wind">--<small>m/s</small></div><div class="wind-sub" id="windSub"></div></div>
+        <svg viewBox="0 0 100 80" aria-label="바람">
+          <g class="gust" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="square">
+            <path d="M4 22h56a12 12 0 1 0-12-12"/>
+            <path d="M4 42h76a12 12 0 1 1-12 12"/>
+            <path d="M4 62h44a10 10 0 1 1-10 10"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="wx-meta" id="wxMeta">날씨 불러오는 중…</div>
+  </section>
+
+  <!-- 2. 3D 시각화 -->
+  <section class="page" id="view">
+    <h2>3D 시각화</h2>
+    <div id="three">
+      <div class="model-note" id="modelNote">3D 모델 불러오는 중…</div>
+      <button class="hud-toggle" id="hudToggle" aria-pressed="true">대시보드 <b>ON</b></button>
+      <div class="tags3d" id="tags3d"></div>
+      <div class="wind-legend" id="windLegend" hidden><span class="wind-arrow" id="windArrow">➜</span><span id="windText"></span></div>
+      <div class="hud" id="hud"></div>
+      <div class="crack-pop" id="crackPop" hidden></div>
+      <div class="hint">왼쪽 드래그: 회전 · 우클릭: 그 지점으로 이동 · 오른쪽 드래그: 옆으로 이동 · 휠: 확대/축소 · 균열 점 클릭: 상세</div>
+    </div>
+  </section>
+
+  <!-- 3. 균열 정보 -->
+  <section class="page" id="crack">
+    <h2>균열 정보</h2>
+    <div class="card" id="crackEmpty">균열 정보를 불러오는 중…</div>
+    <div class="card" id="crackDetails" hidden>
+      <div class="viewer">
+        <div>
+          <div class="stage">
+            <button class="arrow" id="prev">&lt;</button>
+            <div class="img"><img id="cImg" alt="균열 이미지"><div class="lens" id="lens" hidden></div>
+              <div class="zoom" id="zoom" hidden><span>확대 ×3</span></div></div>
+            <button class="arrow" id="next">&gt;</button>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+        <dl>
+          <dt>균열 번호</dt><dd id="cId">-</dd>
+          <dt>위험도</dt><dd id="cSev">-</dd>
+          <dt>길이 / 폭</dt><dd id="cSize">-</dd>
+          <dt>측정 조건</dt><dd id="cRes">-</dd>
+          <dt>위치</dt><dd id="cPos">-</dd>
+          <dt>탐지 시간</dt><dd id="cTime">-</dd>
+          <dt>신뢰도</dt><dd id="cConf">-</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="card" id="crackWidths" style="margin-top:16px" hidden><h3>균열별 폭 (추정, mm)</h3><div id="progress"></div></div>
+  </section>
+
+  <!-- 4. 드론 제어 -->
+  <section class="page" id="drone">
+    <h2>드론 제어</h2>
+    <div class="wind-warn" id="windWarn" hidden></div>
+    <!-- UE5 실시간 화면 (Pixel Streaming) -->
+    <div class="card ps-card">
+      <div class="ps-head">
+        <h3>UE5 드론 화면</h3>
+        <span class="ps-status idle" id="psStatus">연결 전</span>
+        <span class="ps-addr" id="psAddr"></span>
+        <button class="ps-btn" id="psConnectBtn">연결</button>
+        <button class="ps-btn" id="psDisconnectBtn" hidden>연결 끊기</button>
+        <button class="ps-btn fs-btn" id="psFullBtn">⛶ 전체화면</button>
+      </div>
+      <div class="ps-view" id="psView">
+        <div class="ps-video" id="psVideo"></div>
+        <!-- 전체화면일 때만 보이는 점검 버튼·안내 -->
+        <div class="fs-bar">
+          <button class="fs-inspect" id="fsInspectBtn" disabled>점검 <kbd>Space</kbd></button>
+          <div class="inspect-msg idle" id="fsInspectMsg">UE5에 연결되면 점검할 수 있습니다</div>
+          <button class="fs-exit" id="fsExitBtn">전체화면 끝내기 (Esc)</button>
+        </div>
+        <div class="ps-overlay" id="psOverlay"><p id="psOverlayMsg">드론 제어 화면을 열면 UE5에 연결합니다</p>
+          <button class="ps-btn" id="psPlayBtn" hidden>▶ 영상 재생</button></div>
+      </div>
+      <div class="ps-keys">조작: <b>W/S</b> 앞뒤 · <b>A/D</b> 좌우 · <b>E</b> 상승 · <b>Q</b> 하강 · <b>마우스</b> 시점 · <b>Space</b> 점검 <span>(화면을 한 번 누른 뒤 조작)</span></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>균열 점검</h3>
+        <button class="inspect-btn" id="inspectBtn" disabled>점검 <kbd>Space</kbd></button>
+        <div class="inspect-msg idle" id="inspectMsg">UE5에 연결되면 점검할 수 있습니다</div>
+        <div class="inspect-result" id="inspectResult" hidden></div>
+        <div class="row" style="margin-top:18px"><span class="lab">드론 번호</span><b id="dNo">-</b></div>
+        <div class="row"><span class="lab">충전 상태</span><div class="track"><div class="fill" id="dBat"></div></div><b id="dBatTxt"></b></div>
+        <div class="btns"><button data-cmd="patrol">1. 순찰</button><button data-cmd="return">2. 귀환</button></div>
+        <div id="log"></div>
+      </div>
+      <div class="card"><h3>사용 가능 대수</h3><div class="big" id="avail">-<small>대</small></div>
+        <div id="droneList" style="margin-top:12px"></div></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/meshopt_decoder.js"></script>
+<script src="config.js"></script>
+<script>
+const API = window.APP_CONFIG.API_URL.replace(/\/$/, "");
+const SID = window.APP_CONFIG.STRUCTURE_ID;
+const COLOR = {safe:"#22c55e", caution:"#eab308", danger:"#ef4444"};
+const LABEL = {safe:"안전", caution:"주의", danger:"위험"};
+// 3D 관제 화면의 균열 지점 색 (색은 여기에만 씀): 안전 초록 · 주의 노란빛 주황(빨강과 구분) · 위험 빨강 · 그 외 흰색
+const POINT_COLOR = {safe:"#22c55e", caution:"#f59e0b", danger:"#ef4444"};
+const $ = id => document.getElementById(id);
+
+const DRONES = [{no:"D-01",bat:86,ok:true},{no:"D-02",bat:54,ok:true},{no:"D-03",bat:12,ok:false}];
+
+let cracks = [], idx = 0, live = false, structure = null;
+
+// ---- 측정 해상도: 1픽셀이 실제 몇 mm인가 (시스템팀 문서 2-5 계산식) ----
+// 서버 응답에 distanceCm·fovDeg가 없으면 null → "측정 조건 정보 없음"
+const IMG_W = 1920;
+function mmPerPx(c){
+  const d = c.distanceCm ?? c.meta?.distanceCm, f = c.fovDeg ?? c.meta?.fovDeg;
+  if(d == null || f == null) return null;
+  return 2 * d * 10 * Math.tan(f * Math.PI / 360) / (c.imageWidth || IMG_W);
+}
+const r1 = v => v == null ? "-" : Number(v).toFixed(1);
+// 폭·1픽셀당 mm: 1mm 미만은 소수 둘째 자리까지 (0.15와 0.1이 같아 보이지 않게)
+const mm = v => v == null ? "-" : Number(v).toFixed(Math.abs(v) < 1 ? 2 : 1);
+// 폭이 1픽셀보다 작으면 측정 불가 수준 → 신뢰 불가
+const belowRes = c => { const s = mmPerPx(c); return s != null && c.widthMm != null && c.widthMm < s; };
+
+const DANGER_WIDTH_MM = 50;
+const CAUTION_WIDTH_MM = 30;
+function withWidthSeverity(crack){
+  const width = Number(crack.widthMm);
+  const severity = Number.isFinite(width) && width >= DANGER_WIDTH_MM
+    ? "danger"
+    : Number.isFinite(width) && width >= CAUTION_WIDTH_MM ? "caution" : "safe";
+  return {...crack, severity};
+}
+
+async function get(path){
+  const r = await fetch(API + path, {signal: AbortSignal.timeout(4000)});
+  if(!r.ok) throw new Error(r.status);
+  return r.json();
+}
+const fileUrl = u => !u ? "" : (u.startsWith("http") ? u : API + u);
+
+// ---- 로드 ----
+async function load(){
+  try{
+    await get("/health");
+    live = true;
+    structure = await get(`/structures/${SID}`).catch(() => null);   // 이름·주소·최근 점검·modelUrl
+    const list = await get(`/structures/${SID}/cracks`);
+    cracks = (Array.isArray(list) ? list : (list.cracks || [])).map(withWidthSeverity);
+    setStatus(true, "서버 연결");
+  }catch(e){
+    live = false; cracks = [];
+    setStatus(false, "서버 연결 실패");
+  }
+  if(idx >= cracks.length) idx = 0;
+  render();
+}
+function setStatus(ok, msg){
+  $("dot").className = "dot " + (ok ? "ok" : "bad"); $("stat").textContent = msg;
+  $("statAddr").textContent = API.replace(/^https?:\/\//, "");   // 사이드바 아래 작게
+}
+
+// ---- 대시보드 ----
+function render(){
+  renderSite(); renderHero(); renderHud();
+  loadWeather();                                            // 날씨는 서버 API (드론 정보만 아직 임시값)
+  const avail = DRONES.filter(d=>d.ok).length;
+  $("avail").innerHTML = `${avail}<small>대</small>`;
+  showCrack(); showProgress(); showDrone(0);
+  $("droneList").innerHTML = DRONES.map(d=>`<div class="row"><span class="lab">${d.no}</span><div class="track"><div class="fill" style="width:${d.bat}%;background:${d.bat<20?COLOR.danger:COLOR.safe}"></div></div><span>${d.bat}% ${d.ok?"":"(충전 필요)"}</span></div>`).join("");
+  build3D();
+}
+
+// ---- 가로 막대 온도계: −20~40°C, 막대 아래 10도 간격 눈금 ----
+const TH_MIN = -20, TH_MAX = 40, TH_X0 = 6, TH_W = 208;
+const thX = t => TH_X0 + (Math.max(TH_MIN, Math.min(TH_MAX, t)) - TH_MIN) / (TH_MAX - TH_MIN) * TH_W;
+// 기온별 막대 색: 영하 파랑 · 0~10 하늘 · 10~20 초록 · 20~28 주황 · 28 이상 빨강
+const TEMP_COLORS = [[0, "#3b82f6"], [10, "#38bdf8"], [20, "#22c55e"], [28, "#f59e0b"], [Infinity, "#ef4444"]];
+const tempColor = T => TEMP_COLORS.find(([lim]) => T < lim)[1];
+(function drawThermoScale(){
+  let s = "";
+  for(let t = TH_MIN; t <= TH_MAX; t += 5){
+    const x = thX(t).toFixed(1), major = t % 10 === 0;
+    s += `<line class="th-tick" x1="${x}" x2="${x}" y1="22" y2="${major ? 28 : 25}"/>`;
+    if(major) s += `<text class="th-label" x="${x}" y="40" text-anchor="middle">${t < 0 ? "−" + -t : t}${t === TH_MAX ? "°" : ""}</text>`;
+  }
+  $("thermoScale").innerHTML = s;
+})();
+// 기온에 맞춰 막대 길이·색 조절 (값이 없으면 빈 막대)
+function setThermo(T){
+  const f = $("thermoFill");
+  if(T == null){ f.setAttribute("width", 0); return; }
+  f.setAttribute("width", (thX(T) - TH_X0).toFixed(1));
+  f.setAttribute("fill", tempColor(T));
+}
+
+// ---- 날씨 (GET /structures/{id}/weather · 서버가 기상청을 대신 조회, 10분 캐시) ----
+const WIND_LEVEL = {weak:"약함", moderate:"보통", strong:"강함", very_strong:"매우 강함"};
+const DIRS = ["북","북북동","북동","동북동","동","동남동","남동","남남동","남","남남서","남서","서남서","서","서북서","북서","북북서"];
+const windDirName = deg => deg == null ? "" : DIRS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16] + "풍";
+let weather = null, weatherTimer = null;
+
+async function loadWeather(){
+  if(!weatherTimer) weatherTimer = setInterval(loadWeather, 5 * 60 * 1000);   // 5분마다 갱신
+  try{
+    weather = live ? await get(`/structures/${SID}/weather`) : null;
+  }catch(e){ weather = null; }                               // 404(위치 없음)·503(기상청 오류)
+  renderWeather();
+}
+function renderWeather(){
+  const w = weather;
+  if(!w){
+    $("temp").innerHTML = `--<small>°C</small>`; $("humi").innerHTML = `--<small>%</small>`; $("wind").innerHTML = `--<small>m/s</small>`;
+    $("windSub").textContent = ""; $("humiTxt").textContent = "--";
+    $("humiArc").setAttribute("stroke-dasharray", "0 238.76");
+    setThermo(null);
+    $("wxMeta").innerHTML = `<span class="tmp">날씨 정보 없음</span> 서버에서 날씨를 가져오지 못했습니다`;
+    renderWindWarn(); renderHud(); buildWind(); return;
+  }
+  const T = w.temperatureC, H = w.humidityPct;
+  $("temp").innerHTML = `${T ?? "--"}<small>°C</small>`;
+  $("humi").innerHTML = `${H != null ? Math.round(H) : "--"}<small>%</small>`;
+  $("wind").innerHTML = `${w.windSpeedMs ?? "--"}<small>m/s</small>`;
+  const strong = w.windLevel === "strong" || w.windLevel === "very_strong";
+  $("windSub").innerHTML = [windDirName(w.windDirDeg), WIND_LEVEL[w.windLevel]].filter(Boolean)
+    .map((t, i) => i === 1 && strong ? `<b class="danger-txt">${t}</b>` : t).join(" · ");
+  // 일러스트
+  setThermo(T);
+  $("humiArc").setAttribute("stroke-dasharray", `${(H ?? 0) * 2.3876} 238.76`);  // 원둘레 2π·38
+  $("humiTxt").textContent = H != null ? Math.round(H) + "%" : "--";
+  // 관측 정보
+  const when = w.observedAt ? new Date(w.observedAt).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-";
+  $("wxMeta").innerHTML = `${w.source === "KMA" ? "기상청" : (w.source || "")} 관측 <b>${when}</b>`
+    + (structure?.name ? ` · ${structure.name}` : "")
+    + (w.stale ? ` <span class="tmp">최신 정보 아님</span> 기상청 오류로 이전 관측값을 보여주는 중입니다` : "");
+  renderWindWarn(); renderHud(); buildWind();   // 3D 바람 효과도 새 날씨로
+}
+// 드론 제어 화면: 강풍이면 경고
+function renderWindWarn(){
+  const w = weather, el = $("windWarn");
+  const strong = w && (w.windLevel === "strong" || w.windLevel === "very_strong");
+  el.hidden = !strong;
+  if(strong) el.innerHTML = `<b>⚠ 강풍: 실제 드론 비행 주의</b> · 현재 풍속 ${w.windSpeedMs} m/s (${WIND_LEVEL[w.windLevel]})${w.stale ? " · 최신 정보 아님" : ""}`;
+}
+
+// ---- 점검 대상 구조물 (GET /structures/{id}) ----
+function renderSite(){
+  const s = structure;
+  if(!s){ $("site").innerHTML = `<b>구조물 #${SID}</b><span>구조물 정보를 불러오지 못했습니다</span>`; return; }
+  const last = s.lastInspectedAt ? new Date(s.lastInspectedAt).toLocaleString("ko-KR") : "점검 기록 없음";
+  $("site").innerHTML = `<b>${s.name}</b><span>${s.address || ""}</span><span>최근 점검 <b>${last}</b></span>`;
+}
+
+// ---- 위험도별 균열 수 요약 (대시보드 상단 카드 오른쪽 위 · 3D 대시보드에서 같이 사용) ----
+function sevCounts(){
+  const n = {safe:0, caution:0, danger:0};
+  cracks.forEach(c => n[c.severity] = (n[c.severity] || 0) + 1);
+  return n;
+}
+function sevSummaryHtml(){
+  const n = sevCounts(), total = cracks.length || 1;
+  return `<div class="sev-sum">
+    <div class="sev-title">건물 위험도</div>
+    <div class="sev-bar">${["safe","caution","danger"].map(k => n[k]
+      ? `<i style="width:${n[k]/total*100}%;background:${COLOR[k]}"></i>` : "").join("")}</div>
+    <div class="sev-nums">${["safe","caution","danger"].map(k =>
+      `<span class="${k}"><i style="background:${COLOR[k]}"></i>${LABEL[k]} <b>${n[k]}</b></span>`).join("")}</div>
+  </div>`;
+}
+// 작동 가능한 드론 수 (작게 · 위험도 요약 왼쪽) — 드론 API가 없어 임시값
+function droneMiniHtml(){
+  const avail = DRONES.filter(d => d.ok).length;
+  return `<div class="drone-mini"><div class="sev-title">작동 가능 드론</div>
+    <div class="dm-num"><b>${avail}</b><small>/ ${DRONES.length} 대</small></div></div>`;
+}
+const dangerList = () => cracks.filter(c => c.severity === "danger").sort((a,b) => (b.widthMm||0) - (a.widthMm||0));
+
+// ---- 대시보드 상단: 위험 균열이 있으면 위험 균열 목록, 없으면 안내 문구 ----
+function renderHero(){
+  const hero = $("hero");
+  const danger = dangerList();
+  if(!cracks.length){
+    hero.className = "hero";
+    hero.innerHTML = `<div class="hero-head"><h2>${crackEmptyMessage()}</h2><div class="hero-side">${droneMiniHtml()}</div></div>`;
+    return;
+  }
+  if(!danger.length){
+    hero.className = "hero";
+    hero.innerHTML = `<div class="hero-head"><div><h2>균열은 방치하면 사고가 됩니다</h2>
+      <p>위험 기준인 폭 50 mm 이상에 해당하는 균열이 없습니다.</p>
+      <button onclick="goCrack(0)">균열 현황 확인하기</button></div><div class="hero-side">${droneMiniHtml()}${sevSummaryHtml()}</div></div>`;
+    return;
+  }
+  hero.className = "hero urgent";
+  hero.innerHTML = `<div class="hero-head"><h2>⚠ 위험 균열 ${danger.length}건 · 조치 필요</h2><div class="hero-side">${droneMiniHtml()}${sevSummaryHtml()}</div></div>
+    <table class="urgent-list">
+      <thead><tr><th>균열</th><th>위치</th><th>폭 (추정)</th><th>탐지 시각</th><th></th></tr></thead>
+      <tbody>${danger.map(c => {
+        const p = c.pos || {};
+        return `<tr><td><b>#${c.id}</b></td><td>${locHtml(p, crackLocal(p))}</td>
+          <td><b>약 ${mm(c.widthMm)} mm</b>${belowRes(c) ? ' <span class="lowres">해상도 미달</span>' : ""}</td>
+          <td>${c.createdAt ? new Date(c.createdAt).toLocaleString("ko-KR") : "-"}</td>
+          <td><button onclick="goCrack(${cracks.indexOf(c)})">상세</button></td></tr>`;
+      }).join("")}</tbody>
+    </table>`;
+}
+function goCrack(i){ idx = i; showCrack(); document.querySelector("[data-p=crack]").click(); }
+
+// UE5 월드 좌표에서 건물 원점을 빼고 액터 회전을 되돌린다 (단위는 cm).
+function crackLocal(p){
+  if(!p || ![p.x, p.y, p.z].every(Number.isFinite)) return null;
+  const {origin, yawDeg} = window.APP_CONFIG.CRACK_MODEL_FRAME;
+  const yaw = yawDeg * Math.PI / 180, cos = Math.cos(yaw), sin = Math.sin(yaw);
+  const dx = p.x - origin.x, dy = p.y - origin.y;
+  return {x: dx * cos + dy * sin, y: -dx * sin + dy * cos, z: p.z - origin.z};
+}
+// 건물 로컬 좌표(cm) → 동·층 이름 (기준은 config.js의 BUILDING)
+function locLabel(p){
+  const B = window.APP_CONFIG.BUILDING;
+  if(!B || !p || p[B.splitAxis] == null || p.z == null) return null;
+  const side = p[B.splitAxis] < B.splitAt ? B.negSide : B.posSide;
+  const floor = Math.min(B.floors, Math.max(1, Math.floor((p.z - B.groundZ) / B.floorHeight) + 1));
+  return `${side}동 ${floor}층`;
+}
+// 표시용: 동·층을 크게, UE5 좌표는 아래에 작게
+function locHtml(p, local = p){
+  const name = locLabel(local), xyz = p && p.x != null ? `${p.x}, ${p.y}, ${p.z}` : "-";
+  return name ? `<b>${name}</b><small class="xyz">UE5 ${xyz} cm</small>` : xyz;
+}
+
+// 측정 조건 (균열 정보 화면과 3D 상세 팝업에서 같이 사용)
+function measureHtml(c){
+  const s = mmPerPx(c);
+  // 두 줄로 짧게: ① 1픽셀당 mm (거리·화각)  ② 측정 신뢰 불가 경고 (폭이 1픽셀보다 작을 때)
+  return s == null
+    ? `<span class="lowres">측정 조건 정보 없음</span><small>거리·화각을 몰라 정밀도를 판단할 수 없음</small>`
+    : `<span class="meas">1픽셀 ≈ <b>${mm(s)} mm</b> <small>(${r1(c.distanceCm/100)} m · ${c.fovDeg}°)</small></span>`
+      + (belowRes(c) ? `<span class="lowres" title="폭이 1픽셀보다 작아 측정을 믿을 수 없습니다. 현장에서 직접 재야 합니다.">⚠ 측정 신뢰 불가 · 현장 실측</span>` : "");
+}
+
+// ---- 3D 화면 위 대시보드 (On/Off) ----
+let hudOn = true;
+try{ hudOn = localStorage.getItem("hud") !== "off"; }catch(e){}
+function setHud(on){
+  hudOn = on;
+  try{ localStorage.setItem("hud", on ? "on" : "off"); }catch(e){}
+  $("hud").hidden = !on; $("tags3d").hidden = !on;
+  $("three").classList.toggle("dark", on);                  // 관제실 스타일(어두운 화면)
+  $("hudToggle").innerHTML = `대시보드 <b>${on ? "ON" : "OFF"}</b>`;
+  $("hudToggle").setAttribute("aria-pressed", on);
+  $("hudToggle").classList.toggle("off", !on);
+  applyTheme3D();
+}
+$("hudToggle").onclick = () => setHud(!hudOn);
+
+// 3D 장면 색: 대시보드 ON이면 어두운 남색 + 푸른 조명 + 하늘색 격자
+function applyTheme3D(){
+  if(!three) return;
+  const dark = hudOn, gm = three.grid.material;
+  three.amb.color.set(dark ? 0x7fa7ff : 0xffffff); three.amb.intensity = dark ? .55 : .7;
+  three.sun.color.set(dark ? 0xa9ccff : 0xffffff);
+  gm.vertexColors = !dark; gm.color.set(dark ? 0x5b9be6 : 0xffffff);
+  gm.transparent = true; gm.opacity = dark ? .28 : 1; gm.needsUpdate = true;
+}
+
+// 시계 (대시보드 상단 오른쪽) · HH:MM:SS
+const clock = () => new Date().toTimeString().slice(0, 8);
+setInterval(() => { const el = $("hudClock"); if(el && hudOn) el.textContent = clock(); }, 1000);
+
+// 위험도 분포 도넛 (안전·주의·위험)
+function donutSvg(){
+  const n = sevCounts(), total = cracks.length || 1, C = 2 * Math.PI * 34;
+  let acc = 0;
+  const arcs = ["safe","caution","danger"].map(k => {
+    const len = n[k] / total * C, a = `<circle cx="50" cy="50" r="34" fill="none" stroke="${COLOR[k]}" stroke-width="14"
+      stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-acc}" transform="rotate(-90 50 50)"/>`;
+    acc += len; return a;
+  }).join("");
+  return `<svg viewBox="0 0 100 100" class="donut"><circle cx="50" cy="50" r="34" fill="none" stroke="rgba(56,189,248,.15)" stroke-width="14"/>${arcs}
+    <text x="50" y="48" text-anchor="middle" font-size="18" font-weight="800" fill="#e0f2fe">${cracks.length}</text>
+    <text x="50" y="63" text-anchor="middle" font-size="9" fill="#7dd3fc">전체 균열</text></svg>`;
+}
+
+function renderHud(){
+  const n = sevCounts(), total = cracks.length || 1, w = weather;
+  const unreliable = cracks.filter(belowRes).length, avail = DRONES.filter(d => d.ok).length;
+  const ranked = [...cracks].sort((a,b) => (b.widthMm||0) - (a.widthMm||0)).slice(0, 5);
+  const maxW = Math.max(...ranked.map(c => c.widthMm || 0), 1);
+  const recent = [...cracks].sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0, 4);
+  const kpi = (label, val, cls = "", tag = "") => `<div class="kpi ${cls}"><i></i><div><b>${val}</b><span>${label}${tag}</span></div></div>`;
+  const strong = w && (w.windLevel === "strong" || w.windLevel === "very_strong");
+  const row = (c, extra) => `<li><button onclick="openPop(${cracks.indexOf(c)})"><span class="dotc" style="background:${COLOR[c.severity]}"></span>${extra}</button></li>`;
+
+  $("hud").innerHTML = `
+    <div class="hud-top">
+      <div class="hud-title"><b>${structure?.name || "구조물 #" + SID}</b> <span class="ttl">균열 관제 대시보드</span>
+        <span class="sub">/ Digital Twin Crack Monitoring</span></div>
+      <div class="hud-meta">${w ? `${w.temperatureC}°C · 습도 ${Math.round(w.humidityPct)}% · 풍속 ${w.windSpeedMs} m/s` : "날씨 정보 없음"}
+        <span>${new Date().toLocaleDateString("ko-KR")}</span><span id="hudClock">${clock()}</span></div>
+    </div>
+    <div class="hud-kpis">
+      ${kpi("전체 균열", cracks.length)}
+      ${kpi("위험 균열", n.danger, "danger")}
+      ${kpi("측정 신뢰 불가", unreliable, "kwarn")}
+      ${kpi("가동 드론", `${avail}/${DRONES.length}`, "", '')}
+    </div>
+    <div class="hud-col left">
+      <section class="hud-panel"><h4>위험도 분포</h4>
+        <div class="donut-wrap">${donutSvg()}
+          <ul class="legend3d">${["danger","caution","safe"].map(k => `<li><i style="background:${COLOR[k]}"></i>${LABEL[k]}<b>${n[k]}</b><em>${Math.round(n[k]/total*100)}%</em></li>`).join("")}</ul>
+        </div></section>
+      <section class="hud-panel"><h4>기상 현황 ${w?.stale ? '<span class="tmp">최신 정보 아님</span>' : ""}</h4>
+        ${w ? `<div class="wx3d">
+          <div><span>기온</span><b>${w.temperatureC}<small>°C</small></b></div>
+          <div><span>습도</span><b>${Math.round(w.humidityPct)}<small>%</small></b></div>
+          <div><span>풍속</span><b class="${strong ? "red" : ""}">${w.windSpeedMs}<small>m/s</small></b></div>
+        </div><div class="wx3d-sub">${windDirName(w.windDirDeg)} · ${WIND_LEVEL[w.windLevel] || "-"}${strong ? ' · <b class="red">드론 비행 주의</b>' : ""}</div>`
+        : `<div class="hud-empty">날씨 정보 없음</div>`}</section>
+    </div>
+    <div class="hud-col right">
+      <section class="hud-panel"><h4>균열 폭 순위 <small>(추정, mm)</small></h4>
+        <ol class="rank3d">${ranked.map((c, k) => row(c, `<em>${String(k + 1).padStart(2, "0")}</em><span class="nm">#${c.id} ${LABEL[c.severity]}</span>
+          <span class="bar3d"><i style="width:${(c.widthMm||0)/maxW*100}%;background:${COLOR[c.severity]}"></i></span><b>${mm(c.widthMm)}</b>`)).join("")}</ol></section>
+      <section class="hud-panel"><h4>최근 탐지</h4>
+        <ul class="recent3d">${recent.map(c => row(c, `<span class="nm">#${c.id} ${LABEL[c.severity]}</span>
+          <small>${c.createdAt ? new Date(c.createdAt).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-"}</small>`)).join("")}</ul></section>
+    </div>`;
+  renderTags();
+  setHud(hudOn);
+}
+
+// 3D 균열 말풍선 (위험·주의 균열) — 누르면 상세 팝업
+function renderTags(){
+  const list = cracks.map((c, i) => ({c, i})).filter(o => crackLocal(o.c.pos))
+    .sort((a, b) => (a.c.severity === "danger" ? 0 : 1) - (b.c.severity === "danger" ? 0 : 1));
+  $("tags3d").innerHTML = list.map((o, k) => `<button class="tag3d ${o.c.severity}" data-i="${o.i}" style="--lift:${28 + (k % 3) * 12}px"
+      onclick="openPop(${o.i})"><span>#${o.c.id} ${LABEL[o.c.severity]} · ${locLabel(crackLocal(o.c.pos)) ?? ""} · ${mm(o.c.widthMm)} mm</span></button>`).join("");
+}
+
+// ---- 3D 균열 상세 팝업 (균열 점 클릭) ----
+function openPop(i){
+  const c = cracks[i]; if(!c) return;
+  three && (three.sel = i, paintMarkers());
+  const p = c.pos || {}, img = fileUrl(c.overlayUrl || c.imageUrl);
+  $("crackPop").innerHTML = `
+    <div class="pop-head"><b>균열 #${c.id}</b>
+      <span class="tag" style="background:${COLOR[c.severity]}">${LABEL[c.severity] || c.severity}</span>
+      <button class="pop-x" onclick="closePop()" aria-label="닫기">✕</button></div>
+    ${img ? `<img src="${img}" alt="균열 #${c.id} 사진">` : `<div class="pop-noimg">이미지 없음</div>`}
+    <dl>
+      <dt>길이 / 폭</dt><dd>약 ${r1(c.lengthMm)} mm / 약 ${mm(c.widthMm)} mm <span class="est">추정값</span></dd>
+      <dt>측정 조건</dt><dd>${measureHtml(c)}</dd>
+      <dt>위치</dt><dd>${locHtml(p, crackLocal(p))}</dd>
+      <dt>탐지 시간</dt><dd>${c.createdAt ? new Date(c.createdAt).toLocaleString("ko-KR") : "-"}</dd>
+      <dt>신뢰도</dt><dd>${c.confidence != null ? Math.round(c.confidence * 100) + "%" : "-"}</dd>
+    </dl>
+    <button class="pop-more" onclick="goCrack(${i})">균열 정보 화면에서 크게 보기 →</button>`;
+  $("crackPop").hidden = false;
+}
+function closePop(){ $("crackPop").hidden = true; if(three){ three.sel = null; paintMarkers(); } }
+
+// ---- 균열 정보 ----
+function crackEmptyMessage(){
+  return live ? "등록된 균열이 없습니다." : "서버에서 균열 정보를 불러오지 못했습니다.";
+}
+function showCrack(){
+  const c = cracks[idx];
+  $("crackDetails").hidden = !c;
+  $("crackWidths").hidden = !c;
+  $("crackEmpty").hidden = Boolean(c);
+  if(!c){
+    $("crackEmpty").textContent = crackEmptyMessage();
+    return;
+  }
+  $("cImg").src = fileUrl(c.overlayUrl || c.imageUrl);
+  $("cImg").alt = "이미지 없음";
+  hideZoom();
+  renderThumbs();
+  $("cId").textContent = "#" + c.id;
+  $("cSev").innerHTML = `<span class="tag" style="background:${COLOR[c.severity]}">${LABEL[c.severity]||c.severity}</span>`;
+  $("cSize").innerHTML = `약 ${r1(c.lengthMm)} mm / 약 ${mm(c.widthMm)} mm <span class="est">추정값</span>`;
+  $("cRes").innerHTML = measureHtml(c);
+  const p = c.pos || {};
+  $("cPos").innerHTML = locHtml(p, crackLocal(p));
+  $("cTime").textContent = c.createdAt ? new Date(c.createdAt).toLocaleString("ko-KR") : "-";
+  $("cConf").textContent = c.confidence != null ? Math.round(c.confidence*100) + "%" : "-";
+}
+// ---- 돋보기: 사진 위에 커서를 올리면 옆에 확대 화면 ----
+const ZOOM = 3, ZOOM_SIZE = 0.35;                          // 확대 배율, 확대 창 크기(사진 상자 가로의 35%) · 사진 오른쪽 위에 표시
+function hideZoom(){ $("lens").hidden = true; $("zoom").hidden = true; }
+// object-fit:contain 때문에 상자 안에서 실제 사진이 차지하는 영역을 계산
+function shownRect(img){
+  const b = img.getBoundingClientRect(), nw = img.naturalWidth, nh = img.naturalHeight;
+  if(!nw || !nh) return null;
+  const s = Math.min(b.width / nw, b.height / nh), w = nw * s, h = nh * s;
+  return {box: b, left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, w, h};
+}
+$("cImg").parentElement.addEventListener("mousemove", e => {
+  const img = $("cImg"), r = shownRect(img);
+  if(!r) return hideZoom();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if(x < 0 || y < 0 || x > r.w || y > r.h) return hideZoom(); // 사진 바깥 여백
+  const ZW = Math.round(r.box.width * ZOOM_SIZE), ZH = Math.round(ZW * 3 / 4);
+  const lw = ZW / ZOOM, lh = ZH / ZOOM;
+  const cx = Math.max(lw / 2, Math.min(r.w - lw / 2, x));   // 렌즈가 사진 밖으로 나가지 않게
+  const cy = Math.max(lh / 2, Math.min(r.h - lh / 2, y));
+  const lens = $("lens"), zoom = $("zoom");
+  Object.assign(lens.style, {width: lw + "px", height: lh + "px",
+    left: (r.left - r.box.left + cx - lw / 2) + "px", top: (r.top - r.box.top + cy - lh / 2) + "px"});
+  Object.assign(zoom.style, {width: ZW + "px", height: ZH + "px",
+    backgroundImage: `url("${img.currentSrc || img.src}")`,
+    backgroundSize: `${r.w * ZOOM}px ${r.h * ZOOM}px`,
+    backgroundPosition: `${-(cx * ZOOM - ZW / 2)}px ${-(cy * ZOOM - ZH / 2)}px`});
+  lens.hidden = false; zoom.hidden = false;
+});
+$("cImg").parentElement.addEventListener("mouseleave", hideZoom);
+
+// 사진 아래 미리보기: 누르면 그 균열로 이동, 지금 보는 균열은 테두리 강조
+function renderThumbs(){
+  const box = $("thumbs");
+  box.innerHTML = cracks.map((c, i) => {
+    const u = fileUrl(c.overlayUrl || c.imageUrl);
+    return `<button class="thumb${i === idx ? " on" : ""}" onclick="idx=${i};showCrack()" style="--sev:${COLOR[c.severity]}" title="#${c.id} ${LABEL[c.severity] || ""}">
+      ${u ? `<img src="${u}" alt="" loading="lazy">` : `<span class="noimg">이미지 없음</span>`}
+      <span class="cap">#${c.id} ${LABEL[c.severity] || ""}</span></button>`;
+  }).join("");
+  const on = box.querySelector(".on");                     // 선택한 미리보기가 보이도록 가로로만 스크롤
+  if(on) box.scrollLeft = on.offsetLeft - box.offsetLeft - (box.clientWidth - on.clientWidth) / 2;
+}
+function showProgress(){
+  const max = Math.max(...cracks.map(c=>c.widthMm||0), 1);
+  $("progress").innerHTML = cracks.map((c,i)=>`<div class="row"><span class="lab">#${c.id}</span><div class="track"><div class="fill" style="width:${(c.widthMm||0)/max*100}%;background:${COLOR[c.severity]}"></div></div><span>약 ${mm(c.widthMm)} mm${belowRes(c) ? ' <span class="lowres">해상도 미달</span>' : ""}</span></div>`).join("");
+}
+$("prev").onclick = () => { if(!cracks.length) return; idx = (idx-1+cracks.length)%cracks.length; showCrack(); };
+$("next").onclick = () => { if(!cracks.length) return; idx = (idx+1)%cracks.length; showCrack(); };
+
+// ---- 역할: 관리자 / 게스트 (프론트 수정사항 10번) ----
+// 외부(QR·터널) 접속은 서버가 게스트로 처리. 게스트는 조회만 → 드론 제어 메뉴를 숨김.
+// 관리자 토큰은 sessionStorage에만 저장 (코드·NEXT_PUBLIC_에 넣지 않음). 비밀번호는 저장하지 않음.
+const TOKEN_KEY = "crackAdminToken";
+let role = "guest", via = null;
+function getToken(){
+  try{
+    const t = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || "null");
+    if(t?.token && (!t.expiresAt || new Date(t.expiresAt) > new Date())) return t.token;
+    sessionStorage.removeItem(TOKEN_KEY);                   // 만료(12시간)된 토큰 정리
+  }catch(e){}
+  return null;
+}
+function setToken(t){ try{ t ? sessionStorage.setItem(TOKEN_KEY, JSON.stringify(t)) : sessionStorage.removeItem(TOKEN_KEY); }catch(e){} }
+const authHeaders = () => { const t = getToken(); return t ? {Authorization: `Bearer ${t}`} : {}; };
+
+async function checkRole(){
+  try{
+    const r = await fetch(API + "/auth/me", {headers: authHeaders(), signal: AbortSignal.timeout(5000)});
+    const me = await r.json();
+    role = me.role === "admin" ? "admin" : "guest"; via = me.via || null;
+  }catch(e){ role = "guest"; via = null; }                  // 확인 못 하면 안전하게 게스트
+  if(role !== "admin" && getToken()) setToken(null);        // 서버가 인정하지 않는 토큰은 버림
+  applyRole();
+}
+function applyRole(){
+  const admin = role === "admin", droneBtn = document.querySelector("nav [data-p=drone]");
+  droneBtn.hidden = !admin;
+  $("roleTag").className = "role-tag " + (admin ? "admin" : "guest");
+  $("roleTag").textContent = admin ? "관리자" : "게스트";
+  // 외부(터널) 접속은 로그인해도 쓰기가 막히므로 로그인 버튼을 보이지 않음
+  $("roleBtn").hidden = !admin && via === "tunnel";
+  $("roleBtn").textContent = admin ? "로그아웃" : "관리자";
+  if(!admin){
+    if(document.body.dataset.page === "drone") document.querySelector("nav [data-p=dash]").click();  // 드론 화면에서 내보냄
+    if(ps && psState !== "idle"){ ps.disconnect(); psStatus("idle", "연결 끊음", "관리자만 드론을 조종할 수 있습니다"); }
+  }
+}
+$("roleBtn").onclick = () => role === "admin" ? logout() : openLogin();
+function logout(){ setToken(null); checkRole(); }
+
+function openLogin(msg){
+  $("loginErr").textContent = msg || ""; $("loginPw").value = "";
+  $("loginBack").hidden = false; setTimeout(() => $("loginPw").focus(), 0);
+}
+function closeLogin(){ $("loginBack").hidden = true; $("loginPw").value = ""; if(location.hash === "#admin") history.replaceState(null, "", location.pathname); }
+$("loginCancel").onclick = closeLogin;
+$("loginBack").onclick = e => { if(e.target === $("loginBack")) closeLogin(); };
+$("loginForm").onsubmit = async e => {
+  e.preventDefault();
+  const pw = $("loginPw").value; $("loginOk").disabled = true; $("loginErr").textContent = "";
+  try{
+    const r = await fetch(API + "/auth/login", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({password: pw}), signal: AbortSignal.timeout(8000)});
+    if(r.status === 401) throw new Error("비밀번호가 맞지 않습니다");
+    if(r.status === 403) throw new Error("외부 접속에서는 관리자로 로그인할 수 없습니다");
+    if(!r.ok) throw new Error("로그인 실패 (서버 " + r.status + ")");
+    const d = await r.json();
+    setToken({token: d.token, expiresAt: d.expiresAt});
+    await checkRole();
+    if(role === "admin") closeLogin(); else throw new Error("관리자로 확인되지 않았습니다");
+  }catch(err){
+    $("loginErr").textContent = err.name === "TimeoutError" ? "서버 응답 없음" : err.message;
+  }finally{ $("loginOk").disabled = false; $("loginPw").value = ""; }
+};
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("loginBack").hidden) closeLogin(); });
+
+// ---- 드론 제어: UE5 Pixel Streaming (시스템팀 문서 1-4 ①, 2-7) ----
+// 라이브러리는 문서의 UE 5.8용 패키지. jsDelivr ESM은 의존성(sdp) 문제로 안 돼서 esm.sh 번들 사용
+const PS_URL = window.APP_CONFIG.PS_URL || "";
+const PS_LIB = "https://esm.sh/@epicgames-ps/lib-pixelstreamingfrontend-ue5.8@0.1.3?bundle";
+let ps = null, psState = "idle";
+$("psAddr").textContent = PS_URL || "주소 없음";
+
+function psStatus(state, msg, overlay){
+  psState = state;
+  $("psStatus").className = "ps-status " + state; $("psStatus").textContent = msg;
+  $("psOverlay").hidden = state === "ok" && !overlay;
+  $("psOverlayMsg").textContent = overlay || msg;
+  $("psConnectBtn").hidden = state === "ok" || state === "wait";
+  $("psDisconnectBtn").hidden = !(state === "ok" || state === "wait");
+  $("psConnectBtn").textContent = ps ? "다시 연결" : "연결";
+  updateInspectBtn();
+}
+// 20초 넘게 영상이 안 오면 확인할 것을 안내 (시그널링 서버는 켜져 있는데 UE5 프로그램이 꺼진 경우 등)
+let psWaitTimer = null;
+function psWaitHint(){
+  clearTimeout(psWaitTimer);
+  psWaitTimer = setTimeout(() => {
+    if(psState === "wait") $("psOverlayMsg").textContent = "UE5 화면을 기다리는 중입니다. UE5 프로그램(스트리머)이 실행 중인지 UE5 담당에게 확인해 주세요";
+  }, 20000);
+}
+async function psConnect(){
+  if(!PS_URL) return psStatus("bad", "UE5 주소 없음", "config.js의 PS_URL(NEXT_PUBLIC_PS_URL)에 UE5 주소를 넣어 주세요");
+  psWaitHint();
+  if(ps){ psStatus("wait", "UE5 연결 중…"); ps.connect(); return; }
+  psStatus("wait", "UE5 연결 중…");
+  try{
+    const {Config, PixelStreaming} = await import(PS_LIB);
+    const config = new Config({useUrlParams: false, initialSettings: {
+      ss: PS_URL, AutoConnect: true, AutoPlayVideo: true, StartVideoMuted: true,
+      HoveringMouseMode: true, MatchViewportResolution: false}});
+    ps = new PixelStreaming(config, {videoElementParent: $("psVideo")});
+    ps.addEventListener("webRtcConnecting", () => psStatus("wait", "UE5 연결 중…"));
+    ps.addEventListener("webRtcConnected", () => psStatus("ok", "연결됨"));
+    ps.addEventListener("playStreamRejected", () => { psStatus("ok", "연결됨", "브라우저가 자동 재생을 막았습니다"); $("psPlayBtn").hidden = false; });
+    ps.addEventListener("playStream", () => { $("psPlayBtn").hidden = true; psStatus("ok", "연결됨"); });
+    ps.addEventListener("webRtcFailed", () => psStatus("bad", "연결 실패", "UE5에 연결하지 못했습니다. UE5 실행·시그널링 서버·방화벽을 확인해 주세요"));
+    ps.addEventListener("webRtcDisconnected", () => psStatus("bad", "연결 끊김", "UE5 연결이 끊겼습니다"));
+    ps.addResponseEventListener("crack", onUeMessage);       // UE5 → 웹 메시지 (capture_result 등)
+  }catch(e){
+    ps = null;
+    psStatus("bad", "라이브러리 오류", "Pixel Streaming 라이브러리를 불러오지 못했습니다 (인터넷 연결 확인)");
+  }
+}
+$("psConnectBtn").onclick = psConnect;
+$("psDisconnectBtn").onclick = () => { ps?.disconnect(); psStatus("idle", "연결 끊음", "연결을 끊었습니다. 「다시 연결」을 누르세요"); };
+$("psPlayBtn").onclick = () => { ps?.play(); $("psPlayBtn").hidden = true; psStatus("ok", "연결됨"); };
+// 드론 제어 탭을 처음 열 때 자동 연결
+document.querySelector("[data-p=drone]").addEventListener("click", () => { if(psState === "idle" && !ps) psConnect(); });
+
+// ---- 점검: 웹은 POST /inspections만, 캡처·detect는 UE5가 함 ----
+const INSPECT_TIMEOUT = 70000;                              // UE5 업로드 제한 60초 + 여유
+let inspectionId = null, pending = null;
+const lateIds = new Set();                                  // 70초 지나서 늦게 올 수 있는 요청
+// 점검 버튼·안내는 일반 화면과 전체화면 두 곳에 같은 내용으로 표시
+function inspectMsg(kind, msg){
+  ["inspectMsg", "fsInspectMsg"].forEach(id => { $(id).className = "inspect-msg " + kind; $(id).textContent = msg; });
+}
+function updateInspectBtn(){
+  ["inspectBtn", "fsInspectBtn"].forEach(id => {
+    const b = $(id); if(!b) return;
+    b.disabled = psState !== "ok" || !!pending;
+    b.classList.toggle("running", !!pending);
+    b.innerHTML = pending ? "점검 중…" : "점검 <kbd>Space</kbd>";
+  });
+  if(psState !== "ok" && !pending) inspectMsg("idle", "UE5에 연결되면 점검할 수 있습니다");
+  else if(psState === "ok" && !pending && $("inspectMsg").classList.contains("idle"))
+    inspectMsg("ready", "점검 준비됨 · 드론을 구조물 쪽으로 향하게 한 뒤 <Space> 키를 누르세요");
+}
+async function startInspect(){
+  if(psState !== "ok" || pending) return;
+  if(role !== "admin"){ inspectMsg("bad", "드론 점검은 관리자만 할 수 있습니다. 관리자로 로그인해 주세요"); return openLogin(); }
+  pending = {id: null}; updateInspectBtn(); inspectMsg("wait", "점검 요청 중…");
+  try{
+    if(!inspectionId){                                      // 이 화면에서 첫 점검일 때 한 번만
+      const r = await fetch(API + "/inspections", {method: "POST",
+        headers: {"Content-Type": "application/json", ...authHeaders()},   // 관리자 토큰 (쓰기 요청)
+        body: JSON.stringify({structureId: SID}), signal: AbortSignal.timeout(8000)});
+      if(r.status === 401){                                 // 토큰 없음·만료 → 로그인 화면
+        setToken(null); await checkRole(); openLogin("로그인이 만료되었습니다. 다시 로그인해 주세요");
+        throw new Error("관리자 로그인 필요");
+      }
+      if(r.status === 403) throw new Error("외부 접속에서는 점검할 수 없습니다");
+      if(!r.ok) throw new Error("서버 " + r.status);
+      inspectionId = (await r.json()).id;
+    }
+  }catch(e){
+    pending = null; updateInspectBtn();
+    return inspectMsg("bad", `점검을 시작하지 못했습니다 (${e.name === "TimeoutError" ? "API 서버 응답 없음" : e.message})`);
+  }
+  const id = "c-" + Date.now();
+  pending = {id, timer: setTimeout(() => { lateIds.add(id); finishInspect("bad", "응답이 없습니다. 다시 점검해 주세요"); }, INSPECT_TIMEOUT)};
+  ps.emitUIInteraction({type: "capture", id, inspectionId});
+  logLine(`점검 요청 ${id} (점검 #${inspectionId})`);
+}
+function finishInspect(kind, msg){
+  if(pending?.timer) clearTimeout(pending.timer);
+  pending = null; inspectMsg(kind, msg); updateInspectBtn(); logLine(msg);
+}
+function onUeMessage(res){
+  let m; try{ m = JSON.parse(res); }catch(e){ return; }
+  const id = m.type === "detect_result" ? m.captureId : m.id;
+  if(m.type === "detect_result" && lateIds.has(id)){           // 늦게 온 결과: 오버레이 없이 목록만 새로고침
+    lateIds.delete(id); logLine(`늦게 도착한 결과 ${id} → 균열 목록 새로고침`); return load();
+  }
+  if(!pending || id !== pending.id) return;
+  if(m.type === "capture_result" && m.drone) setDronePose(m.drone);   // 3D 화면 드론을 실제 위치로
+  if(m.type === "capture_result"){
+    if(!m.hitOk) finishInspect("warn", "구조물을 향해 주세요");
+    else inspectMsg("wait", `분석 중… (벽까지 약 ${r1(m.distanceCm / 100)} m)`);
+  }else if(m.type === "detect_result"){
+    const list = (m.cracks || []).map(withWidthSeverity);
+    finishInspect("ok", list.length ? `분석 완료 · 균열 ${list.length}건 발견` : "분석 완료 · 균열 없음");
+    showInspectResult(list); load();                        // 대시보드·3D·균열 정보 새로고침
+  }else if(m.type === "detect_error"){
+    finishInspect("bad", m.status === 0 ? "UE5가 서버에 연결하지 못했습니다"
+      : m.status === 409 ? "이전 점검을 처리 중입니다" : `분석 실패 · ${m.message || m.status}`);
+  }
+}
+function showInspectResult(list){
+  const el = $("inspectResult"); el.hidden = false;
+  if(!list.length){ el.innerHTML = `<p>이 화면에서는 균열이 탐지되지 않았습니다.</p>`; return; }
+  const img = fileUrl(list[0].overlayUrl || list[0].imageUrl);
+  el.innerHTML = `${img ? `<img src="${img}" alt="탐지 결과">` : ""}
+    <ul>${list.map(c => `<li><span class="tag" style="background:${COLOR[c.severity]}">${LABEL[c.severity] || c.severity}</span>
+      폭 약 ${mm(c.widthMm)} mm${belowRes(c) ? ' <span class="lowres">해상도 미달</span>' : ""}</li>`).join("")}</ul>`;
+}
+$("inspectBtn").onclick = startInspect;
+$("fsInspectBtn").onclick = e => { startInspect(); e.currentTarget.blur(); };   // 키보드 조작이 UE5로 가도록 포커스 해제
+
+// Space 키 = 점검 (드론 제어 화면·전체화면에서만)
+// window 캡처 단계에서 먼저 받아, Space가 UE5로 전달되거나 페이지가 스크롤·버튼이 눌리지 않게 막음
+window.addEventListener("keydown", e => {
+  if(e.code !== "Space" || document.body.dataset.page !== "drone") return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if(e.repeat) return;                                      // 꾹 누르고 있을 때 반복 방지
+  document.activeElement?.blur?.();
+  if(psState !== "ok") return inspectMsg("idle", "UE5에 연결되면 Space로 점검할 수 있습니다");
+  if(pending) return;                                       // 이미 점검 중
+  startInspect();
+}, true);
+window.addEventListener("keyup", e => {                    // Space를 뗄 때 버튼이 눌리는 것도 막음
+  if(e.code === "Space" && document.body.dataset.page === "drone") { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+
+// ---- 드론 화면 전체화면 ----
+// 브라우저 전체화면이 막힌 환경(일부 앱 내장 브라우저 등)에서는 창을 꽉 채우는 방식으로 대신 엶
+const isFull = () => !!document.fullscreenElement || $("psView").classList.contains("fake-fs");
+function syncFullBtn(){ $("psFullBtn").textContent = isFull() ? "⛶ 전체화면 끝내기" : "⛶ 전체화면"; }
+function enterFull(){
+  const v = $("psView"), fake = () => { v.classList.add("fake-fs"); syncFullBtn(); };
+  if(!(document.fullscreenEnabled && v.requestFullscreen)) return fake();
+  v.requestFullscreen().catch(fake);
+  setTimeout(() => { if(!document.fullscreenElement) fake(); }, 700);   // 요청이 응답 없이 멈추는 환경 대비
+}
+function exitFull(){
+  if(document.fullscreenElement) document.exitFullscreen();
+  $("psView").classList.remove("fake-fs"); syncFullBtn();
+}
+$("psFullBtn").onclick = () => isFull() ? exitFull() : enterFull();
+$("fsExitBtn").onclick = exitFull;
+document.addEventListener("fullscreenchange", syncFullBtn);
+document.addEventListener("keydown", e => { if(e.key === "Escape" && $("psView").classList.contains("fake-fs")) exitFull(); });
+
+// ---- 드론 ----
+let dsel = 0;
+function showDrone(i){
+  const d = DRONES[i];
+  $("dNo").textContent = d.no;
+  $("dBat").style.width = d.bat+"%"; $("dBat").style.background = d.bat<20?COLOR.danger:COLOR.safe;
+  $("dBatTxt").textContent = d.bat+"%";
+}
+const RUN_MS = 3000; // 임시: 실제로는 드론 명령 완료 신호를 받으면 해제
+const logLine = msg => { $("log").innerHTML += `[${new Date().toLocaleTimeString("ko-KR")}] ${msg}<br>`; $("log").scrollTop = 1e6; };
+document.querySelectorAll("[data-cmd]").forEach(b => b.onclick = () => {
+  const name = b.dataset.cmd === "patrol" ? "순찰" : "귀환";
+  b.classList.add("running"); b.disabled = true;           // 누르면 검은색
+  logLine(`${DRONES[dsel].no} ${name} 시작 (임시: 서버 미연동)`);
+  setTimeout(() => {                                       // 실행 완료 → 다시 흰색
+    b.classList.remove("running"); b.disabled = false;
+    logLine(`${DRONES[dsel].no} ${name} 완료`);
+  }, RUN_MS);
+});
+
+// ---- 3D (임시 건물 박스 + 균열 마커) ----
+let three = null;
+const ueToThree = p => [p.x/100, p.z/100, p.y/100]; // 문서 1-4 ③ 출발점 공식
+function build3D(){
+  const el = $("three");
+  if(!three){
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(50, 1, .1, 500);
+    const r = new THREE.WebGLRenderer({antialias:true,alpha:true}); el.prepend(r.domElement);
+    const amb=new THREE.AmbientLight(0xffffff,.7); scene.add(amb); const l=new THREE.DirectionalLight(0xffffff,.8); l.position.set(10,20,10); scene.add(l);
+    const g = new THREE.Group(); scene.add(g);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(14,10,8), new THREE.MeshStandardMaterial({color:0x64748b}));
+    b.position.set(7,5,0); g.add(b);                        // .glb가 없을 때 쓰는 임시 박스
+    const grid = new THREE.GridHelper(40,40,0x94a3b8,0xb6c6d6); scene.add(grid);
+    three = {scene,cam,r,g,grid,markers:new THREE.Group(),dist:26,rx:.4,ry:-.6,target:new THREE.Vector3(7,5,0),
+             minDist:3, maxDist:150, markerR:.35, amb, sun:l, // 확대/축소 한계 (카메라 거리, m), 마커 반지름
+             bbox:new THREE.Box3(new THREE.Vector3(0,0,-4), new THREE.Vector3(14,10,4))};  // 건물 범위 (바람 효과용, 모델이 오면 갱신)
+    g.add(three.markers);
+    applyTheme3D();
+    loadModel(b);
+    // 왼쪽 드래그: 회전 · 오른쪽 드래그: 카메라 이동(팬) — 3D 화면(canvas)에서만 시작
+    let drag=null,lx=0,ly=0,downX=0,downY=0;
+    el.onmousedown=e=>{if(e.target!==r.domElement)return;
+      three.anim = null;                                    // 날아가는 중이면 멈추고 손으로 조작
+      drag = e.button===2 ? "pan" : e.button===0 ? "rotate" : null;
+      lx=downX=e.clientX;ly=downY=e.clientY;
+      if(drag==="pan") r.domElement.style.cursor="move";};
+    r.domElement.addEventListener("contextmenu", e => e.preventDefault());   // 우클릭 메뉴 끄기
+    addEventListener("mouseup",e=>{
+      if(drag==="pan"){
+        r.domElement.style.cursor="";
+        // 우클릭(끌지 않음) → 누른 곳으로 카메라가 날아가 그 지점을 중심으로 봄
+        if(Math.hypot(e.clientX-downX, e.clientY-downY) <= 5) focusAt(e);
+      }
+      drag=null;
+    });
+    const right=new THREE.Vector3(), up=new THREE.Vector3();
+    addEventListener("mousemove",e=>{
+      if(!drag) return;
+      const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+      if(drag==="rotate"){
+        three.ry-=dx*.01; three.rx=Math.max(-1.2,Math.min(1.4,three.rx+dy*.01));
+      }else{
+        // 화면에서 끈 만큼 장면이 따라오도록: 1px당 이동량 = 화면 높이에 보이는 거리 ÷ 높이
+        const k = 2*three.dist*Math.tan(cam.fov*Math.PI/360)/el.clientHeight;
+        right.setFromMatrixColumn(cam.matrix,0); up.setFromMatrixColumn(cam.matrix,1);
+        three.target.addScaledVector(right,-dx*k).addScaledVector(up,dy*k);
+      }
+    });
+    // 휠: 거리에 비례해 확대/축소 (가까울 땐 천천히, 멀 땐 빠르게)
+    el.onwheel=e=>{if(e.target!==r.domElement)return;e.preventDefault();three.anim=null;three.dist=Math.max(three.minDist,Math.min(three.maxDist,three.dist*Math.exp(e.deltaY*.001)))};
+    // 균열 점 고르기: 클릭(드래그 아님) → 상세 팝업, 빈 곳 클릭 → 팝업 닫기
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+    const pick = e => {
+      const b = r.domElement.getBoundingClientRect();
+      ndc.set((e.clientX-b.left)/b.width*2-1, -(e.clientY-b.top)/b.height*2+1);
+      ray.setFromCamera(ndc, cam);
+      return ray.intersectObjects(three.markers.children)[0]?.object;
+    };
+    // 우클릭한 지점(건물 표면 → 없으면 바닥)으로 카메라 중심을 부드럽게 옮기고 조금 다가감
+    const ground = new THREE.Plane(new THREE.Vector3(0,1,0), 0), gp = new THREE.Vector3();
+    const ping = new THREE.Mesh(new THREE.RingGeometry(.8,1,32), new THREE.MeshBasicMaterial({color:0x5b9be6, transparent:true, depthTest:false, side:THREE.DoubleSide}));
+    ping.renderOrder = 11; ping.visible = false; scene.add(ping);
+    window.focusAt = e => {
+      const b = r.domElement.getBoundingClientRect();
+      ndc.set((e.clientX-b.left)/b.width*2-1, -(e.clientY-b.top)/b.height*2+1);
+      ray.setFromCamera(ndc, cam);
+      const hit = ray.intersectObjects(three.g.children.filter(o => o !== three.markers), true)[0];
+      const p = hit ? hit.point : ray.ray.intersectPlane(ground, gp);
+      if(!p) return;
+      three.anim = {t0: performance.now(), from: three.target.clone(), to: p.clone(),
+                    d0: three.dist, d1: Math.max(three.minDist, three.dist * .7)};
+      // 누른 자리에 하늘색 고리 표시 (잠깐 보였다 사라짐)
+      ping.position.copy(p); ping.lookAt(cam.position); ping.scale.setScalar(three.dist * .02); ping.visible = true; ping.userData.t0 = performance.now();
+    };
+    three.stepAnim = now => {
+      const a = three.anim;
+      if(a){
+        const k = Math.min(1, (now - a.t0) / 600), ez = 1 - Math.pow(1 - k, 3);   // 0.6초, 처음 빠르고 끝에 느리게
+        three.target.lerpVectors(a.from, a.to, ez); three.dist = a.d0 + (a.d1 - a.d0) * ez;
+        if(k === 1) three.anim = null;
+      }
+      if(ping.visible){
+        const k = (now - ping.userData.t0) / 900;
+        ping.material.opacity = Math.max(0, 1 - k); ping.lookAt(cam.position);
+        if(k >= 1) ping.visible = false;
+      }
+    };
+    r.domElement.addEventListener("click", e => {
+      if(Math.hypot(e.clientX-downX, e.clientY-downY) > 5) return;   // 드래그로 회전한 경우
+      const hit = pick(e);
+      if(hit) openPop(hit.userData.i);
+      else if(pickDrone(e)) openDronePop();                 // 드론을 누르면 드론 정보
+      else closePop();
+    });
+    // 드론 모델을 눌렀는지 (테두리 빛 복제본은 제외)
+    const pickDrone = e => {
+      if(!three.drone) return false;
+      const b = r.domElement.getBoundingClientRect();
+      ndc.set((e.clientX-b.left)/b.width*2-1, -(e.clientY-b.top)/b.height*2+1);
+      ray.setFromCamera(ndc, cam);
+      return ray.intersectObject(three.drone.holder, true).some(h => h.object.isMesh && !h.object.userData.isOutline);
+    };
+    r.domElement.addEventListener("mousemove", e => { if(!drag) r.domElement.style.cursor = (pick(e) || pickDrone(e)) ? "pointer" : ""; });
+    // 균열 말풍선 위치를 매 프레임 마커 위치에 맞춤
+    const wp = new THREE.Vector3(), buildingCenter = new THREE.Vector3();
+    three.placeTags = () => {
+      const tags = $("tags3d"); if(!hudOn || !tags.children.length) return;
+      const w = el.clientWidth, h = el.clientHeight;
+      three.bbox.getCenter(buildingCenter).project(cam);
+      [...tags.children].forEach(t => {
+        const m = three.markers.children.find(o => o.userData.i === +t.dataset.i);
+        if(m) m.getWorldPosition(wp).project(cam);
+        const off = !m || Math.abs(wp.z) > 1 || Math.abs(wp.x) > 1 || Math.abs(wp.y) > 1;
+        t.hidden = off;
+        if(off) return;
+        t.classList.toggle("tag-left", wp.x < buildingCenter.x);
+        t.classList.toggle("tag-down", wp.y < buildingCenter.y);
+        t.style.transform = `translate(${(wp.x+1)/2*w}px, ${(1-wp.y)/2*h}px)`;
+      });
+    };
+    (function loop(){requestAnimationFrame(loop);
+      const w=el.clientWidth,h=el.clientHeight; if(!w||!h)return;
+      r.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix();
+      three.stepAnim(performance.now());
+      stepWind(performance.now());                          // 바람 줄기 움직임
+      stepDrone(performance.now());                         // 드론 프로펠러·호버링
+      const t=three.target;
+      cam.position.set(Math.sin(three.ry)*Math.cos(three.rx)*three.dist+t.x, Math.sin(three.rx)*three.dist+t.y, Math.cos(three.ry)*Math.cos(three.rx)*three.dist+t.z);
+      cam.lookAt(t); r.render(scene,cam); three.placeTags(); placeWindLegend()})();
+  }
+  three.markers.clear();
+  cracks.forEach((c,i)=>{
+    const local = crackLocal(c.pos);
+    if(!local) return;
+    // depthTest:false → 건물에 가려도 균열 점이 항상 보이고 클릭됨
+    const m = new THREE.Mesh(new THREE.SphereGeometry(three.markerR,16,16),
+      new THREE.MeshBasicMaterial({color:POINT_COLOR[c.severity] || "#ffffff", depthTest:false, transparent:true, opacity:.95}));
+    m.renderOrder = 10; m.userData.i = i;
+    m.position.set(...ueToThree(local)); three.markers.add(m);
+  });
+  paintMarkers();
+}
+// 선택한 균열 점은 크게, 나머지는 원래 크기
+function paintMarkers(){
+  three.markers.children.forEach(m => m.scale.setScalar(m.userData.i === three.sel ? 1.8 : 1));
+}
+
+// 압축(KHR_mesh_quantization)된 꼭짓점 좌표를 실수(Float32)로 풀어 둠.
+// three.js r128은 정규화된 정수 좌표를 레이캐스트할 때 정규화를 풀지 않아 클릭 위치가 수만 배로 틀어짐.
+function dequantize(root){
+  const MAX = {Int8Array:127, Uint8Array:255, Int16Array:32767, Uint16Array:65535};
+  root.traverse(o => {
+    const a = o.isMesh && o.geometry.attributes.position;
+    if(!a || !a.normalized) return;
+    const src = a.isInterleavedBufferAttribute ? a.data.array : a.array, div = MAX[src.constructor.name];
+    if(!div) return;
+    const f = new Float32Array(a.count * 3);
+    for(let i = 0; i < a.count; i++){
+      f[i*3]   = Math.max(a.getX(i) / div, -1);
+      f[i*3+1] = Math.max(a.getY(i) / div, -1);
+      f[i*3+2] = Math.max(a.getZ(i) / div, -1);
+    }
+    o.geometry.setAttribute("position", new THREE.BufferAttribute(f, 3));
+  });
+}
+
+// 구조물의 modelUrl(.glb)을 불러와 임시 박스를 바꿈. 실패하면 박스를 두고 "임시" 표시
+function loadModel(box){
+  const note = $("modelNote"), url = structure?.modelUrl;
+  const fail = why => { note.textContent = `임시 박스 표시 중 · ${why}`; note.classList.add("warn-note"); loadDrone(); };
+  if(!url) return fail("구조물에 3D 모델 주소가 없음");
+  if(!THREE.GLTFLoader) return fail("3D 로더를 불러오지 못함");
+  const loader = new THREE.GLTFLoader();
+  // EXT_meshopt_compression으로 압축된 .glb(예: gltfpack -cc)를 풀기 위한 디코더
+  if(window.MeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);
+  loader.load(fileUrl(url), gltf => {
+    dequantize(gltf.scene);                                 // 클릭 위치 계산(레이캐스트)이 맞도록
+    three.g.remove(box); three.g.add(gltf.scene);           // 모델은 GLB의 건물 로컬 좌표를 유지
+    const bb = new THREE.Box3().setFromObject(gltf.scene), size = bb.getSize(new THREE.Vector3());
+    const s = Math.max(size.x, size.y, size.z) || 10;
+    bb.getCenter(three.target); three.dist = s * 1.8;
+    // 모델 크기에 맞춰 확대/축소 한계·그리는 거리·바닥 격자·마커 크기를 조정
+    three.minDist = s * 0.3; three.maxDist = Math.max(s * 10, 150);
+    three.cam.far = three.maxDist + s * 4;
+    const gs = Math.ceil(s * 4 / 10) * 10;
+    three.scene.remove(three.grid);
+    three.grid = new THREE.GridHelper(gs, 40, 0x94a3b8, 0xb6c6d6); three.scene.add(three.grid); applyTheme3D();
+    three.markerR = Math.max(.35, s * 0.012);
+    three.bbox = bb.clone();
+    build3D();                                              // 마커를 새 크기로 다시 그림
+    buildWind();                                            // 건물 크기에 맞춰 바람 효과 다시 만듦
+    loadDrone();                                            // 건물 옆에 드론 모델
+    note.textContent = `3D 모델: ${url}`; note.classList.remove("warn-note");
+  }, undefined, () => fail(`3D 모델 파일 없음 (${url})`));
+}
+
+// ---- 3D 드론 모델: 서버의 drone.glb를 건물 옆에 띄움 ----
+// 평소엔 건물 앞 중간 높이에서 호버링, 점검 때 UE5가 보낸 드론 위치(capture_result.drone)로 날아감.
+// 실제 드론(약 1 m)은 92 m 건물 옆에서 안 보이므로 건물 크기의 약 6 %로 키워서 보여 줌 (실제 비율 아님).
+function loadDrone(){
+  const url = window.APP_CONFIG.DRONE_MODEL_URL;
+  if(!three || !url || !THREE.GLTFLoader || three.drone || three.droneLoading) return;
+  three.droneLoading = true;
+  const loader = new THREE.GLTFLoader();
+  if(window.MeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);
+  loader.load(fileUrl(url), gltf => {
+    three.droneLoading = false;
+    const obj = gltf.scene, props = [];
+    dequantize(obj);
+    // 프로펠러는 자기 중심으로 돌도록 회전축을 각 날개 가운데로 옮김
+    obj.traverse(o => {
+      if(o.isMesh && /propeller/i.test(o.name)){
+        o.geometry.computeBoundingBox();
+        const c = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+        o.geometry.translate(-c.x, -c.y, -c.z); o.position.add(c); props.push(o);
+      }
+    });
+    // 모델이 거의 검정이라 어두운 3D 배경에 묻힘 → 밝은 회색 기운 + 은은한 푸른 빛을 더해 잘 보이게
+    obj.traverse(o => {
+      if(!o.isMesh) return;
+      o.material = o.material.clone();
+      o.material.color.lerp(new THREE.Color(0x9aa3b5), 0.55);
+      if(o.material.emissive) o.material.emissive.set(0x1d2a52);
+      if("metalness" in o.material) o.material.metalness = Math.min(o.material.metalness, .4);
+    });
+    // 빛나는 테두리: 각 부품을 법선 방향으로 살짝 부풀린 뒷면 복제본을 푸른빛(가산 혼합)으로 겹침
+    const own0 = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3());
+    const edge = Math.max(own0.x, own0.z) * 0.025;          // 테두리 두께 (모델 크기의 2.5 %)
+    const glowMat = new THREE.MeshBasicMaterial({color: 0x6f8bff, side: THREE.BackSide, transparent: true, opacity: .75,
+                                                 blending: THREE.AdditiveBlending, depthWrite: false});
+    glowMat.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>\n transformed += normalize(normal) * ${edge.toFixed(5)};`);
+    };
+    const outlines = [];
+    obj.traverse(o => {
+      if(!o.isMesh || o.userData.isOutline) return;
+      const out = new THREE.Mesh(o.geometry, glowMat); out.userData.isOutline = true; out.renderOrder = 1;
+      o.add(out); outlines.push(out);
+    });
+    const bb = three.bbox, S = Math.max(...bb.getSize(new THREE.Vector3()).toArray()) || 14;
+    const own = own0;
+    const scale = (S * 0.08) / (Math.max(own.x, own.z) || 1);
+    const holder = new THREE.Group(); holder.add(obj); obj.scale.setScalar(scale);
+    const glow = new THREE.PointLight(0x8fb0ff, 1.2, S * 0.4); glow.position.set(0, S * 0.03, 0); holder.add(glow);   // 드론 주변을 밝혀 위치가 보이게
+    // 기본 위치: 건물 앞쪽(+Z) 가운데, 높이 45 %
+    const home = new THREE.Vector3((bb.min.x + bb.max.x) / 2, bb.min.y + (bb.max.y - bb.min.y) * 0.45, bb.max.z + S * 0.18);
+    holder.position.copy(home); holder.rotation.y = Math.PI;      // 건물을 바라보게
+    three.scene.add(holder);
+    three.drone = {holder, props, glowMat, target: home.clone(), yaw: Math.PI, S, last: performance.now()};
+  }, undefined, () => { three.droneLoading = false; });
+}
+// 점검 때 UE5가 알려 준 드론 위치·방향 (UE5 cm, yaw 도) → 3D 화면 드론을 그 자리로
+function setDronePose(d){
+  if(!three?.drone || d?.x == null) return;
+  three.drone.target.set(...ueToThree(d));
+  if(d.yaw != null) three.drone.yaw = -d.yaw * Math.PI / 180 + Math.PI / 2;   // UE5 yaw(왼손) → Three.js 회전 (좌표 검증 전 추정)
+  three.drone.pose = {ue: {x: d.x, y: d.y, z: d.z}, yaw: d.yaw, at: new Date(), t: performance.now()};   // 드론 정보 팝업용 · 잠깐 머문 뒤 다시 순찰
+}
+
+// 3D 드론을 눌렀을 때: 드론 정보 (균열 상세와 같은 팝업 자리)
+// 드론 번호·배터리는 아직 드론 API가 없어 임시값, 위치는 점검 때 UE5가 알려 준 실제 좌표
+function openDronePop(){
+  const D = three?.drone; if(!D) return;
+  three.sel = null; paintMarkers();
+  const d = DRONES[dsel] || DRONES[0], avail = DRONES.filter(x => x.ok).length, w = weather;
+  const pose = D.pose;
+  // 순찰 중이면 지금 있는 곳, 점검 위치를 받아 머무는 중이면 그 위치
+  const where = D.patrolling ? `${locHtml(droneUe(D))}` : pose ? `${locHtml(pose.ue)}` : `<b>대기 위치</b>`;
+  const state = pending ? "점검 중" : D.patrolling ? "순찰 중" : pose ? "점검 위치에서 대기" : "대기";
+  const strong = w && (w.windLevel === "strong" || w.windLevel === "very_strong");
+  $("crackPop").innerHTML = `
+    <div class="pop-head"><b>드론 ${d.no}</b>
+      <button class="pop-x" onclick="closePop()" aria-label="닫기">✕</button></div>
+    <dl>
+      <dt>상태</dt><dd>${state}</dd>
+      <dt>충전 상태</dt><dd><span class="pop-bat"><i style="width:${d.bat}%;background:${d.bat < 20 ? "var(--danger)" : "var(--safe)"}"></i></span> ${d.bat}%${d.ok ? "" : " · 충전 필요"}</dd>
+      <dt>위치</dt><dd>${where}</dd>
+      <dt>마지막 점검</dt><dd>${pose ? pose.at.toLocaleTimeString("ko-KR") : "이 화면에서 아직 없음"}</dd>
+      <dt>현재 바람</dt><dd>${w ? `${windDirName(w.windDirDeg)} ${w.windSpeedMs} m/s · ${WIND_LEVEL[w.windLevel] || "-"}` : "날씨 정보 없음"}${strong ? '<small class="lowres">강풍: 실제 드론 비행 주의</small>' : ""}</dd>
+      <dt>가동 드론</dt><dd>${avail} / ${DRONES.length} 대</dd>
+    </dl>
+    ${role === "admin" ? `<button class="pop-more" onclick="closePop();document.querySelector('nav [data-p=drone]').click()">드론 제어 화면으로</button>` : ""}`;
+  $("crackPop").hidden = false;
+}
+function stepDrone(now){
+  const D = three?.drone; if(!D) return;
+  const dt = Math.min(.1, (now - D.last) / 1000); D.last = now;
+  if(!REDUCE_MOTION){
+    D.props.forEach(p => p.rotation.y += dt * 45);           // 프로펠러 회전
+    D.glowMat.opacity = .55 + Math.sin(now / 450) * .25;     // 테두리 빛이 천천히 숨쉬듯 밝아졌다 어두워짐
+  }
+  // 순찰: 점검 위치를 받은 직후(HOLD_MS 동안)가 아니면 건물 둘레를 타원으로 계속 돌며 높이를 오르내림
+  const holding = D.pose && now - D.pose.t < DRONE_HOLD_MS;
+  D.patrolling = !holding && !REDUCE_MOTION;
+  if(D.patrolling){
+    const bb = three.bbox, c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+    const a = (now / 1000) * (Math.PI * 2 / DRONE_LOOP_S);   // 한 바퀴 DRONE_LOOP_S초
+    const rx = sz.x / 2 + D.S * 0.14, rz = sz.z / 2 + D.S * 0.14;   // 건물 벽에서 조금 떨어진 둘레
+    D.target.set(c.x + rx * Math.sin(a), bb.min.y + sz.y * (0.5 + 0.32 * Math.sin(a * 1.7)), c.z + rz * Math.cos(a));
+    D.yaw = Math.atan2(c.x - D.target.x, c.z - D.target.z);   // 카메라(앞)가 건물 벽을 보도록
+  }
+  // 목표 위치로 부드럽게 이동 + 살짝 오르내림 (호버링)
+  const bob = REDUCE_MOTION ? 0 : Math.sin(now / 700) * D.S * 0.004;
+  const k = Math.min(1, dt * (D.patrolling ? 2.5 : 1.5));
+  D.holder.position.x += (D.target.x - D.holder.position.x) * k;
+  D.holder.position.z += (D.target.z - D.holder.position.z) * k;
+  D.holder.position.y += (D.target.y + bob - D.holder.position.y) * k;
+  let dy = D.yaw - D.holder.rotation.y;                      // 가장 짧은 쪽으로 돌기 (−π~π)
+  dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  D.holder.rotation.y += dy * k;
+}
+const DRONE_LOOP_S = 70;          // 순찰 한 바퀴 시간 (초)
+const DRONE_HOLD_MS = 30000;      // 점검 위치를 받은 뒤 그 자리에 머무는 시간 (밀리초) → 그 뒤 다시 순찰
+// 지금 드론이 있는 곳 → UE5 좌표(cm) (3D m → UE5: x×100, y=z×100, z=y×100)
+const droneUe = D => ({x: Math.round(D.holder.position.x * 100), y: Math.round(D.holder.position.z * 100), z: Math.round(D.holder.position.y * 100)});
+
+// ---- 3D 바람 효과: 기상청 풍향·풍속에 따라 바람 줄기의 방향·굵기·길이·속도·개수가 바뀜 ----
+// windDirDeg는 바람이 "불어오는" 방향(0=북, 90=동) → 줄기는 그 반대쪽으로 흐름.
+// 장면에서 북쪽 방향은 config.js BUILDING.northDeg 로 맞춤 (0이면 화면 안쪽(-Z)이 북쪽).
+const WIND_TIER = [   // 약함 · 보통 · 강함 · 매우 강함 (서버 windLevel 기준과 같음)
+  {count: 26,  thick: 1.0, opacity: .45, color: 0xd6e6ff},
+  {count: 48,  thick: 1.6, opacity: .55, color: 0xd6e6ff},
+  {count: 64,  thick: 1.9, opacity: .65, color: 0xffc2a8},
+  {count: 90,  thick: 2.6, opacity: .75, color: 0xff8c7a},
+];
+const REDUCE_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+function windTier(w){
+  const k = {weak:0, moderate:1, strong:2, very_strong:3}[w.windLevel];
+  return k ?? (w.windSpeedMs < 4 ? 0 : w.windSpeedMs < 9 ? 1 : w.windSpeedMs < 14 ? 2 : 3);
+}
+function buildWind(){
+  if(!three) return;
+  if(three.wind){                                           // 이전 바람 줄기 정리
+    three.scene.remove(three.wind.mesh); three.wind.mesh.geometry.dispose(); three.wind.mesh.material.dispose(); three.wind = null;
+  }
+  const w = weather;
+  if(!w || w.windSpeedMs == null || w.windDirDeg == null) return;
+  const B = window.APP_CONFIG.BUILDING || {}, T = WIND_TIER[windTier(w)], spd = w.windSpeedMs;
+  const bb = three.bbox, size = bb.getSize(new THREE.Vector3()), S = Math.max(size.x, size.y, size.z) || 14;
+  const center = bb.getCenter(new THREE.Vector3());
+  // 흐르는 방향 (바람이 오는 쪽의 반대), 화면 기준: +X 동, -Z 북
+  const flow = ((w.windDirDeg + 180) + (B.northDeg || 0)) * Math.PI / 180;
+  const dir = new THREE.Vector3(Math.sin(flow), 0, -Math.cos(flow)).normalize();
+  const side = new THREE.Vector3(-dir.z, 0, dir.x);          // 바람과 직각인 옆 방향
+  const len = S * (0.12 + 0.02 * spd);                       // 풍속이 셀수록 길게 (약 1.7 m/s → 건물 폭의 15%)
+  const thick = S * 0.006 * T.thick;                         // 등급이 높을수록 굵게 (약함 ≈ 건물 폭의 0.6%)
+  const geo = new THREE.BoxGeometry(thick, thick, len);
+  const mat = new THREE.MeshBasicMaterial({color: T.color, transparent: true, opacity: T.opacity, depthWrite: false});
+  const mesh = new THREE.InstancedMesh(geo, mat, T.count);
+  mesh.renderOrder = 5; mesh.frustumCulled = false;
+  const R = S * 0.95;                                        // 건물 둘레로 흐르는 범위 (바람 방향 기준 ±R)
+  const items = [];
+  for(let i = 0; i < T.count; i++){
+    items.push({
+      along: (Math.random() * 2 - 1) * R,                    // 바람 방향 위치
+      across: (Math.random() * 2 - 1) * R,                   // 옆 위치
+      y: bb.min.y + Math.random() * size.y * 1.15,           // 높이 (건물 높이보다 조금 위까지)
+      v: S * (0.04 + 0.022 * spd) * (0.7 + Math.random() * 0.6),   // 속도: 풍속에 비례 + 줄기마다 조금씩 다르게
+      s: 0.6 + Math.random() * 0.8,                          // 길이 배율 (돌풍 느낌)
+    });
+  }
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+  three.wind = {mesh, items, dir, side, center, R, q, m: new THREE.Matrix4(), p: new THREE.Vector3(), sc: new THREE.Vector3(), last: performance.now()};
+  three.scene.add(mesh);
+  stepWind(performance.now(), true);
+}
+function stepWind(now, force){
+  const W = three?.wind; if(!W) return;
+  const dt = Math.min(.1, (now - W.last) / 1000); W.last = now;
+  if(REDUCE_MOTION && !force) return;                        // '움직임 줄이기' 설정이면 멈춘 채로 표시
+  if(!three.bbox) return;
+  W.items.forEach((it, i) => {
+    it.along += it.v * dt;
+    if(it.along > W.R){                                     // 바람이 빠져나가면 반대편(바람 오는 쪽)에서 다시 들어옴
+      it.along -= 2 * W.R; it.across = (Math.random() * 2 - 1) * W.R;
+    }
+    W.p.copy(W.center).addScaledVector(W.dir, it.along).addScaledVector(W.side, it.across); W.p.y = it.y;
+    // 건물 안을 지나는 동안은 숨김 → 바람이 건물을 돌아 흐르는 것처럼 보임
+    W.sc.set(1, 1, it.s);
+    if(three.bbox.containsPoint(W.p)) W.sc.setScalar(0.0001);
+    W.m.compose(W.p, W.q, W.sc); W.mesh.setMatrixAt(i, W.m);
+  });
+  W.mesh.instanceMatrix.needsUpdate = true;
+}
+// 화면 왼쪽 아래 바람 표시: 화살표가 지금 보는 각도에서 바람이 흐르는 방향을 가리킴
+function placeWindLegend(){
+  const el = $("windLegend"), W = three?.wind, w = weather;
+  if(!W || !w){ el.hidden = true; return; }
+  el.hidden = false;
+  const a = W.center.clone().project(three.cam), b = W.center.clone().addScaledVector(W.dir, 10).project(three.cam);
+  const ang = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
+  $("windArrow").style.transform = `rotate(${ang}deg)`;
+  const txt = `${windDirName(w.windDirDeg)} ${w.windSpeedMs} m/s · ${WIND_LEVEL[w.windLevel] || ""}`;
+  if($("windText").textContent !== txt) $("windText").textContent = txt;
+  el.classList.toggle("strong", windTier(w) >= 2);
+}
+
+// ---- 탭 ----
+document.querySelectorAll("nav button[data-p]")   /* 메뉴 버튼만 (관리자 로그인 버튼 제외) */.forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button[data-p],.page").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $(b.dataset.p).classList.add("on");
+  document.body.dataset.page = b.dataset.p;                 // 3D 화면은 본문 꽉 채우기 (CSS)
+  if(b.dataset.p !== "drone") inspectionId = null;          // 드론 화면을 나가면 그 점검은 끝 (질문 2 답)
+});
+document.body.dataset.page = "dash";
+
+checkRole().then(() => { if(location.hash === "#admin" && role !== "admin") openLogin(); });
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 로컬·개인 정보 (깃에 올리지 않음)
+# config.js: 내부망 IP·터널 주소 → config.example.js를 복사해 사용
+config.js
+.vercel
+.env*
+.claude
+
+# 팀 내부 문서·스케치
+*.md
+!README.md
+*.jpg
+
+node_modules

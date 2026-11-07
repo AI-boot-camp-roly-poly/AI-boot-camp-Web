@@ -1,0 +1,569 @@
+/* 레퍼런스: 푸른 배경 + 흰 컨테이너 + 둥근 카드 + 큰 굵은 제목 / 경각심을 위해 각진 고딕 폰트 */
+:root{
+  --bg:#7ea8cb; --paper:#fff; --card:#f1f5f9; --ink:#0f172a; --sub:#475569; --line:#d9e1ea;
+  --dark:#111827; --blue:#5f8fb8;
+  --safe:#16a34a; --caution:#ca8a04; --danger:#dc2626;
+}
+*{box-sizing:border-box}
+/* 바깥 흰 상자 없이 화면 전체를 씀: 왼쪽 파란 사이드바 + 오른쪽 흰 본문 */
+html{background:var(--paper)}
+body{
+  margin:0; min-height:100vh;
+  background:var(--paper);
+  display:flex; color:var(--ink);
+  font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif; font-weight:500; letter-spacing:-.01em;
+}
+b,strong{font-weight:800}
+
+/* 사이드바: 화면 왼쪽 끝에 붙고, 스크롤해도 따라옴 */
+nav{width:110px;padding:20px 8px;flex-shrink:0;background:var(--bg);display:flex;flex-direction:column;
+  position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+nav h1{font-size:20px;font-weight:800;margin:0 8px 6px;letter-spacing:-.02em}
+nav .sub{font-size:11px;color:#1e3a5f;margin:0 8px 28px;font-weight:700}
+nav button{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--ink);
+  padding:12px 10px;border-radius:2px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;margin-bottom:4px}
+nav button .n{width:28px;height:28px;border-radius:2px;background:var(--dark);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+nav button:hover{background:rgba(255,255,255,.3)}
+nav button.on{background:var(--dark);color:#fff}
+nav button.on .n{background:#fff;color:var(--dark)}
+
+main{flex:1;padding:24px 28px;min-width:0}
+.status{font-size:12px;color:var(--sub);margin-bottom:18px;font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:var(--caution)}
+.dot.ok{background:var(--safe)} .dot.bad{background:var(--danger)}
+
+h2{margin:0 0 20px;font-size:40px;font-weight:900;letter-spacing:-.03em;line-height:1.1}
+
+/* 히어로 */
+.hero{background:linear-gradient(135deg,#4f7fa8 0%,#9bbad6 100%);border-radius:2px;padding:44px 40px;color:#fff;margin-bottom:28px}
+.hero h2{color:#fff;font-size:40px;white-space:nowrap;margin:0 0 12px}
+.hero p{margin:0 0 24px;font-size:17px;font-weight:600;opacity:.95;max-width:520px;line-height:1.5}
+.hero button{background:#fff;color:var(--ink);border:0;border-radius:2px;padding:14px 28px;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--card);border-radius:2px;padding:22px}
+.card h3{margin:0 0 12px;font-size:13px;color:var(--sub);font-weight:700;letter-spacing:.02em}
+.big{font-size:46px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.big small{font-size:14px;color:var(--sub);font-weight:700;margin-left:6px;letter-spacing:0}
+
+.bar{display:flex;height:30px;border-radius:2px;overflow:hidden;margin:14px 0}
+.bar div{display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--sub);font-weight:600}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px}
+.legend b{color:var(--ink);font-size:16px}
+.card.alert{background:#fef2f2;border:2px solid var(--danger)}
+.card.alert h3{color:var(--danger)}
+
+#three{height:calc(100vh - 150px);min-height:520px;border-radius:2px;background:#dbe7f1;position:relative;overflow:hidden;cursor:grab}
+#three canvas{display:block}
+#three .hint{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--sub);font-weight:600}
+
+.viewer{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px;align-items:start}
+.stage{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:14px;align-items:center}
+.viewer .img{aspect-ratio:4/3;background:#e2e8f0;border-radius:2px;display:grid;place-items:center;overflow:hidden;color:var(--sub)}
+.viewer .img img{width:100%;height:100%;object-fit:contain}
+.arrow{width:44px;height:44px;border-radius:2px;background:var(--paper);border:2px solid var(--dark);color:var(--dark);cursor:pointer;font-size:16px;font-weight:800}
+.arrow:hover{background:var(--dark);color:#fff}
+dl{margin:0;font-size:14px} dt{color:var(--sub);margin-top:12px;font-size:12px;font-weight:700} dd{margin:3px 0 0;font-weight:800;font-size:16px}
+.tag{display:inline-block;padding:4px 14px;border-radius:2px;font-size:14px;color:#fff;font-weight:800}
+
+.row{display:flex;align-items:center;gap:12px;margin:10px 0;font-size:14px;font-weight:700}
+.row .lab{width:76px;color:var(--sub);font-weight:700}
+.row .track{flex:1;height:12px;background:#dfe6ee;border-radius:2px;overflow:hidden}
+.row .fill{height:100%;border-radius:2px}
+
+.btns{display:flex;gap:12px;margin-top:18px}
+.btns button{flex:1;padding:16px;border-radius:2px;border:2px solid var(--dark);background:#fff;color:var(--dark);font:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:background .15s,color .15s}
+.btns button:hover{background:var(--card)}
+.btns button.running{background:var(--dark);color:#fff}
+.btns button:disabled{cursor:wait}
+.drone{height:230px;display:grid;place-items:center;font-size:84px;background:#dbe7f1;border-radius:2px}
+#log{font:12px/1.7 "Consolas",monospace;color:var(--sub);margin-top:12px;max-height:100px;overflow:auto}
+
+.page{display:none} .page.on{display:block}
+@media(max-width:860px){
+  body{flex-direction:column;margin:0;border-radius:0}
+  nav{width:auto;height:auto;display:flex;overflow:auto;padding:10px 12px;position:sticky;top:0;z-index:20;align-self:stretch}
+  nav h1,nav .sub{display:none}
+  nav button{white-space:nowrap;width:auto}
+  main{padding:20px 16px}
+  h2,.hero h2{font-size:26px}
+  .hero h2{white-space:normal}
+  .grid3,.grid2,.viewer{grid-template-columns:1fr}
+}
+
+/* 환경 지표 카드 + 일러스트 */
+.metric{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.metric svg{width:92px;height:92px;flex-shrink:0}
+.gust path{stroke-dasharray:140;animation:gust 2.4s linear infinite}
+.gust path:nth-child(2){animation-delay:-.8s}
+.gust path:nth-child(3){animation-delay:-1.6s}
+@keyframes gust{from{stroke-dashoffset:140}to{stroke-dashoffset:-140}}
+#humiArc{transition:stroke-dasharray .6s}
+
+/* 샘플·임시 데이터 경고 */
+.warn{background:#fbbf24;color:#111827;border-left:10px solid #111827;padding:14px 18px;margin-bottom:20px;font-size:14px;font-weight:600;border-radius:2px}
+.warn b{font-size:16px}
+.warn span{display:block;font-size:12px;margin-top:4px;opacity:.8}
+.tmp{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-size:11px;font-weight:800;padding:1px 6px;margin-left:4px;border-radius:2px;vertical-align:1px}
+
+/* 측정 정밀도 */
+.est{display:inline-block;background:#e2e8f0;color:#334155;font-size:11px;font-weight:800;padding:1px 6px;border-radius:2px;vertical-align:2px}
+.lowres{color:var(--danger);font-weight:800;font-size:12px}
+dd small{color:var(--sub);font-weight:600;font-size:12px}
+
+/* 위험 균열 목록 */
+.hero.urgent{background:#7f1d1d;border-left:10px solid #dc2626;padding:32px 36px}
+.hero.urgent h2{font-size:32px;white-space:normal}
+.urgent-list{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.urgent-list th{text-align:left;font-size:12px;font-weight:700;color:#fecaca;padding:8px 10px;border-bottom:2px solid #fca5a5}
+.urgent-list td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.2);font-weight:600}
+.urgent-list .lowres{color:#fde047}
+.urgent-list button{padding:8px 16px;font-size:13px}
+@media(max-width:860px){.urgent-list th:nth-child(2),.urgent-list td:nth-child(2){display:none}}
+
+/* 균열 사진 미리보기 */
+.thumbs{display:flex;gap:10px;overflow-x:auto;margin:14px 58px 0;padding-bottom:6px}
+.thumb{flex:0 0 112px;padding:0;border:2px solid transparent;background:#e2e8f0;cursor:pointer;border-radius:2px;text-align:left;font:inherit;opacity:.65}
+.thumb:hover{opacity:1}
+.thumb.on{border-color:var(--dark);opacity:1}
+.thumb img,.thumb .noimg{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.thumb .noimg{display:grid;place-items:center;font-size:11px;color:var(--sub);font-weight:700}
+.thumb .cap{display:block;font-size:11px;font-weight:800;padding:4px 6px;border-top:4px solid var(--sev);background:#fff}
+@media(max-width:860px){.thumbs{margin:12px 0 0}}
+
+/* 돋보기 */
+.stage{position:relative}
+.viewer .img{position:relative;cursor:crosshair}
+.lens{position:absolute;border:2px solid #fff;outline:1px solid var(--dark);background:rgba(255,255,255,.15);pointer-events:none}
+.zoom{position:absolute;top:8px;right:8px;z-index:5;pointer-events:none;
+  background-color:#0f172a;background-repeat:no-repeat;border:3px solid var(--dark);border-radius:2px;box-shadow:0 8px 24px rgba(15,23,42,.35)}
+.zoom span{position:absolute;left:0;top:0;background:var(--dark);color:#fff;font-size:11px;font-weight:800;padding:3px 8px}
+@media(hover:none){.lens,.zoom{display:none!important}}
+
+/* 점검 대상 구조물 */
+.site{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--dark)}
+.site>b{font-size:22px;font-weight:900}
+.site span{font-size:13px;color:var(--sub);font-weight:600}
+.site span b{color:var(--ink)}
+
+/* 3D 모델 상태 */
+.model-note{position:absolute;left:14px;top:12px;z-index:2;font-size:12px;font-weight:700;color:var(--sub);background:rgba(255,255,255,.85);padding:4px 10px;border-radius:2px}
+.model-note.warn-note{background:#fbbf24;color:#111827;font-weight:800}
+
+/* 날씨 */
+.wind-sub{font-size:13px;font-weight:700;color:var(--sub);margin-top:8px}
+.danger-txt{color:var(--danger)}
+.wx-meta{font-size:12px;color:var(--sub);font-weight:600;margin:-6px 0 16px}
+.wx-meta b{color:var(--ink)}
+.wind-warn{background:#fef2f2;border:2px solid var(--danger);border-left:10px solid var(--danger);color:#7f1d1d;padding:12px 16px;margin-bottom:16px;font-size:14px;font-weight:600;border-radius:2px}
+.wind-warn b{color:var(--danger);font-size:15px}
+
+/* 섭씨 온도계 그림 */
+.metric svg.thermo{width:88px;height:152px}
+#thermoFill{transition:y .6s,height .6s}
+
+/* 대시보드 상단 카드: 제목 + 오른쪽 위 위험도 요약 */
+.hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px 24px;flex-wrap:wrap}
+.hero-head>div:first-child,.hero-head>h2{flex:1 1 320px;min-width:0}
+.hero .hero-head h2{white-space:normal}
+.sev-sum{flex:0 0 250px;background:rgba(255,255,255,.95);color:var(--ink);padding:12px 14px;border-radius:2px}
+.sev-title{font-size:12px;font-weight:800;color:var(--sub);margin-bottom:8px}
+.sev-bar{display:flex;height:12px;background:#e2e8f0;border-radius:2px;overflow:hidden}
+.sev-bar i{display:block;height:100%}
+.sev-nums{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;font-weight:700;color:var(--sub)}
+.sev-nums i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.sev-nums b{color:var(--ink);font-size:16px;font-weight:900;margin-left:2px}
+.sev-nums .danger b{color:var(--danger);font-size:18px}
+
+/* 3D 균열 상세 팝업 */
+.crack-pop{position:absolute;top:56px;right:12px;z-index:4;width:300px;max-height:calc(100% - 100px);overflow:auto;background:#fff;
+  border:2px solid var(--dark);padding:14px;border-radius:2px;box-shadow:0 10px 28px rgba(15,23,42,.3)}
+.pop-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.pop-head b{font-size:17px;font-weight:900}
+.pop-x{margin-left:auto;width:30px;height:30px;border:2px solid var(--dark);background:#fff;font-size:14px;font-weight:800;cursor:pointer;border-radius:2px}
+.pop-x:hover{background:var(--dark);color:#fff}
+.crack-pop img,.pop-noimg{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#e2e8f0;border-radius:2px}
+.pop-noimg{display:grid;place-items:center;font-size:12px;color:var(--sub)}
+.crack-pop dl{font-size:13px} .crack-pop dt{margin-top:8px} .crack-pop dd{font-size:14px}
+.pop-more{width:100%;margin-top:12px;padding:12px;background:var(--dark);color:#fff;border:0;font:inherit;font-size:14px;font-weight:800;cursor:pointer;border-radius:2px}
+.pop-more:hover{opacity:.85}
+@media(max-width:860px){.crack-pop{left:12px;right:12px;width:auto;top:auto;bottom:12px;max-height:60%}}
+
+/* ===== 대시보드 상단 카드: 드론 수(작게) + 위험도 ===== */
+.hero-side{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+.drone-mini{background:rgba(255,255,255,.95);color:var(--ink);padding:12px 14px;border-radius:2px;min-width:118px}
+.dm-num b{font-size:30px;font-weight:900;line-height:1.1}
+.dm-num small{font-size:12px;color:var(--sub);font-weight:700;margin-left:4px}
+.hero:not(.urgent) .drone-mini,.hero:not(.urgent) .sev-sum{box-shadow:0 2px 10px rgba(15,23,42,.15)}
+
+/* ===== 3D 대시보드 ON/OFF 버튼 (오른쪽 아래) ===== */
+.hud-toggle{position:absolute;top:auto;bottom:12px;right:12px;z-index:5;background:var(--dark);color:#fff;border:2px solid var(--dark);
+  padding:8px 14px;font:inherit;font-size:13px;font-weight:700;border-radius:2px;cursor:pointer}
+.hud-toggle b{display:inline-block;min-width:28px;margin-left:4px;color:#4ade80}
+.hud-toggle.off{background:#fff;color:var(--dark)}
+.hud-toggle.off b{color:var(--sub)}
+
+/* ===== 관제실 스타일 (대시보드 ON) ===== */
+#three.dark{background:radial-gradient(ellipse at 50% 60%,#16246a 0%,#0b1442 55%,#060a24 100%)}
+#three.dark .hint{color:#a9c8f0;bottom:12px;left:50%;transform:translateX(-50%);white-space:nowrap;opacity:.8}
+#three.dark .model-note{top:auto;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(10,16,52,.8);color:#a9c8f0;border:1px solid rgba(91,155,230,.35)}
+#three.dark .model-note.warn-note{background:#fbbf24;color:#111827}
+#three.dark .hud-toggle{background:rgba(10,16,52,.85);border-color:#5b9be6;color:#eaf1fb}
+#three.dark .hud-toggle:hover{background:#0c4a6e}
+
+.hud{position:absolute;inset:0;z-index:2;pointer-events:none;color:#eaf1fb;font-size:12px}
+.hud .hud-panel,.hud button{pointer-events:auto}
+.hud .tmp{background:rgba(251,191,36,.18);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+.hud-top{position:absolute;left:0;right:0;top:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  background:linear-gradient(180deg,rgba(6,10,36,.95),rgba(6,10,36,.55));border-bottom:1px solid rgba(91,155,230,.35)}
+.hud-title{font-size:15px;font-weight:700;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-right:12px}
+.hud-title b{color:#5b9be6;font-weight:900;margin-right:4px}
+.hud-title .sub{color:#a9c8f0;font-size:11px;font-weight:600;margin-left:6px;opacity:.8}
+.hud-meta{display:flex;gap:14px;white-space:nowrap;font-size:12px;color:#cfe0f6;font-weight:600}
+.hud-meta span{color:#eaf1fb}
+#hudClock{font-variant-numeric:tabular-nums;color:#5b9be6;font-weight:800}
+
+.hud-kpis{position:absolute;top:56px;left:50%;transform:translateX(-50%);display:flex;gap:26px}
+.kpi{display:flex;align-items:center;gap:8px}
+.kpi i{width:26px;height:26px;border:2px solid #5b9be6;background:rgba(91,155,230,.15);box-shadow:0 0 10px rgba(91,155,230,.5);border-radius:2px}
+.kpi b{display:block;font-size:24px;font-weight:900;line-height:1;color:#fff;text-shadow:0 0 12px rgba(91,155,230,.8)}
+.kpi span{font-size:11px;color:#a9c8f0;font-weight:600}
+.kpi.danger i{border-color:#ef4444;background:rgba(239,68,68,.2);box-shadow:0 0 10px rgba(239,68,68,.6)}
+.kpi.danger b{color:#fecaca;text-shadow:0 0 12px rgba(239,68,68,.9)}
+.kpi.kwarn i{border-color:#fbbf24;background:rgba(251,191,36,.18);box-shadow:0 0 10px rgba(251,191,36,.5)}
+
+.hud-col{position:absolute;top:56px;bottom:56px;width:236px;display:flex;flex-direction:column;gap:10px}
+.hud-col.left{left:12px} .hud-col.right{right:12px}
+.hud-panel{background:linear-gradient(180deg,rgba(14,24,78,.82),rgba(8,14,48,.82));border:1px solid rgba(91,155,230,.3);
+  border-top:2px solid #5b9be6;padding:10px 12px;border-radius:2px;backdrop-filter:blur(3px)}
+.hud-panel h4{margin:0 0 8px;font-size:12px;font-weight:800;color:#eaf1fb;letter-spacing:.02em}
+.hud-panel h4 small{color:#a9c8f0;font-weight:600}
+.hud-empty{color:#a9c8f0;font-size:12px}
+.red{color:#f87171 !important}
+
+.donut-wrap{display:flex;align-items:center;gap:10px}
+.donut{width:96px;height:96px;flex-shrink:0}
+.legend3d{list-style:none;margin:0;padding:0;flex:1}
+.legend3d li{display:flex;align-items:center;gap:6px;padding:3px 0;white-space:nowrap;font-weight:600;color:#cfe0f6}
+.legend3d i{width:9px;height:9px;border-radius:2px}
+.legend3d b{margin-left:auto;color:#fff;font-size:14px}
+.legend3d em{font-style:normal;color:#a9c8f0;width:32px;text-align:right}
+
+.wx3d{display:flex;justify-content:space-between}
+.wx3d span{display:block;font-size:11px;color:#a9c8f0;font-weight:600}
+.wx3d b{font-size:20px;font-weight:900;color:#fff}
+.wx3d small{font-size:11px;color:#a9c8f0;margin-left:2px}
+.wx3d-sub{margin-top:6px;color:#cfe0f6;font-weight:600}
+
+.rank3d,.recent3d{list-style:none;margin:0;padding:0}
+.rank3d button,.recent3d button{width:100%;display:flex;align-items:center;gap:6px;background:none;border:0;border-bottom:1px solid rgba(91,155,230,.15);
+  color:#eaf1fb;font:inherit;font-size:12px;padding:6px 2px;cursor:pointer;text-align:left}
+.rank3d button:hover,.recent3d button:hover{background:rgba(91,155,230,.12)}
+.rank3d em{font-style:normal;color:#5b9be6;font-weight:800;width:18px}
+.rank3d .nm,.recent3d .nm{font-weight:700;white-space:nowrap}
+.bar3d{flex:1;height:5px;background:rgba(91,155,230,.15);border-radius:2px;overflow:hidden}
+.bar3d i{display:block;height:100%}
+.rank3d b{width:38px;text-align:right;font-weight:800}
+.recent3d small{margin-left:auto;color:#a9c8f0}
+.dotc{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px currentColor}
+
+/* 3D 균열 말풍선 */
+.tags3d{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.tag3d{position:absolute;left:0;top:0;pointer-events:auto;background:none;border:0;padding:0;cursor:pointer;font:inherit}
+.tag3d span{position:absolute;left:18px;bottom:var(--lift);transform:translateY(50%);white-space:nowrap;font-size:12px;font-weight:800;color:#eaf1fb;
+  background:rgba(10,16,52,.88);border:1px solid #5b9be6;padding:4px 10px;border-radius:2px;box-shadow:0 0 12px rgba(91,155,230,.45)}
+.tag3d::before{content:"";position:absolute;left:0;bottom:0;width:18px;height:var(--lift);border-left:1px solid #5b9be6;border-top:1px solid #5b9be6;
+  transform-origin:left bottom;transform:scale(var(--tag-x,1),var(--tag-y,1));opacity:.8}
+.tag3d.tag-left{--tag-x:-1}
+.tag3d.tag-down{--tag-y:-1}
+.tag3d.tag-left span{left:auto;right:18px}
+.tag3d.tag-down span{bottom:auto;top:var(--lift);transform:translateY(-50%)}
+.tag3d.danger span{border-color:#ef4444;color:#fecaca;box-shadow:0 0 14px rgba(239,68,68,.6)}
+.tag3d.danger::before{border-color:#ef4444}
+.tag3d.caution span{border-color:#fbbf24;color:#fde68a}
+.tag3d.caution::before{border-color:#fbbf24}
+
+/* 관제실 스타일에서 상세 팝업 */
+#three.dark .crack-pop{top:56px;right:260px;background:rgba(8,14,48,.96);color:#eaf1fb;border:1px solid #5b9be6;border-top:2px solid #5b9be6;box-shadow:0 0 24px rgba(91,155,230,.35)}
+#three.dark .crack-pop dt{color:#a9c8f0}
+#three.dark .crack-pop small{color:#a9c8f0}
+#three.dark .pop-x{background:transparent;color:#eaf1fb;border-color:#5b9be6}
+#three.dark .pop-more{background:#243394}
+#three.dark .crack-pop .est{background:rgba(91,155,230,.2);color:#cfe0f6}
+
+@media(max-width:860px){.hud-col,.hud-kpis{display:none}.hud-title .sub,.hud-meta span:first-of-type{display:none}#three.dark .crack-pop{right:12px}}
+
+/* 3D 화면이 좁을 때 (컨테이너 기준) */
+#three{container-type:inline-size}
+@container (max-width: 1000px){
+  .hud-title .sub{display:none}
+  .hud-kpis{left:12px;right:12px;transform:none;justify-content:space-around;gap:8px;top:52px;
+    background:rgba(6,10,36,.6);padding:6px 8px;border-bottom:1px solid rgba(91,155,230,.2)}
+  .kpi b{font-size:18px} .kpi i{width:18px;height:18px}
+  .hud-col{top:104px;width:210px}
+  #three.dark .crack-pop{top:104px;right:230px}
+}
+@container (max-width: 760px){
+  .hud-col{width:190px}
+  .donut{width:72px;height:72px} .legend3d em{display:none}
+  .hud-meta span:first-of-type{display:none}
+  #three.dark .crack-pop{right:12px}
+}
+
+/* ===== 드론 제어: UE5 Pixel Streaming ===== */
+.ps-card{margin-bottom:16px}
+.ps-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.ps-head h3{margin:0;font-size:15px;color:var(--ink);font-weight:900}
+.ps-status{font-size:12px;font-weight:800;padding:3px 10px;border-radius:2px;background:#e2e8f0;color:var(--sub)}
+.ps-status.wait{background:#fef3c7;color:#92400e}
+.ps-status.ok{background:#dcfce7;color:#166534}
+.ps-status.bad{background:#fee2e2;color:#991b1b}
+.ps-addr{font:12px Consolas,monospace;color:var(--sub)}
+.ps-btn{margin-left:auto;padding:7px 14px;border:2px solid var(--dark);background:#fff;color:var(--dark);font:inherit;font-size:13px;font-weight:800;border-radius:2px;cursor:pointer}
+.ps-btn:hover{background:var(--dark);color:#fff}
+.ps-view{position:relative;aspect-ratio:16/9;background:#05080f;border-radius:2px;overflow:hidden}
+.ps-video{position:absolute;inset:0}
+.ps-video video{width:100%!important;height:100%!important;object-fit:contain;background:#000}
+.ps-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  background:rgba(5,8,15,.82);color:#e2e8f0;font-weight:700;text-align:center;padding:20px}
+.ps-overlay p{margin:0;font-size:14px}
+.ps-overlay .ps-btn{margin:0;background:transparent;color:#fff;border-color:#fff}
+.ps-keys{margin-top:10px;font-size:13px;color:var(--sub);font-weight:600}
+.ps-keys b{color:var(--ink)} .ps-keys span{font-size:12px}
+
+.inspect-btn{width:100%;padding:18px;border:2px solid var(--dark);background:#fff;color:var(--dark);font:inherit;font-size:18px;font-weight:900;border-radius:2px;cursor:pointer}
+.inspect-btn:hover:not(:disabled){background:var(--card)}
+.inspect-btn.running{background:var(--dark);color:#fff}
+.inspect-btn:disabled:not(.running){opacity:.4;cursor:not-allowed}
+.inspect-msg{margin-top:10px;padding:10px 12px;font-size:14px;font-weight:700;border-radius:2px;background:#f1f5f9;color:var(--sub)}
+.inspect-msg.wait{background:#fef3c7;color:#92400e}
+.inspect-msg.ok{background:#dcfce7;color:#166534}
+.inspect-msg.warn{background:#fef3c7;color:#92400e;border-left:6px solid #f59e0b}
+.inspect-msg.bad{background:#fee2e2;color:#991b1b;border-left:6px solid var(--danger)}
+.inspect-result{margin-top:10px}
+.inspect-result img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#e2e8f0;border-radius:2px}
+.inspect-result ul{list-style:none;margin:8px 0 0;padding:0}
+.inspect-result li{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px;font-weight:700}
+.inspect-result p{margin:0;font-size:13px;color:var(--sub)}
+.ps-overlay[hidden]{display:none}
+
+/* 3D·드론 화면은 바깥 카드 없이 본문 너비 전체 사용 */
+.card.ps-card{background:none;padding:0;border-radius:0}
+.ps-view{max-height:calc(100vh - 230px);width:100%}
+
+/* ===== 사이드바: 폭 절반(110px) · 번호 위, 글자 아래 · 서버 상태는 맨 아래 ===== */
+nav h1{font-size:15px;margin:0 4px 4px;text-align:center}
+nav .sub{font-size:10px;margin:0 2px 18px;text-align:center;line-height:1.35}
+nav button{flex-direction:column;gap:6px;padding:10px 4px;font-size:12px;text-align:center;justify-content:center}
+nav button .n{width:26px;height:26px}
+nav .status{margin:auto 0 0;padding-top:12px;border-top:1px solid rgba(17,24,39,.2);font-size:11px;color:var(--ink);font-weight:800;text-align:center;line-height:1.4}
+nav .status .dot{margin-right:4px}
+nav .status small{display:block;font-size:9px;font-weight:600;color:#1e3a5f;word-break:break-all;margin-top:2px}
+@media(max-width:860px){
+  nav{flex-direction:row;width:auto}
+  nav button{flex-direction:row;gap:8px;padding:10px 12px;font-size:13px}
+  nav .status{margin:0 0 0 auto;border-top:0;padding-top:0;align-self:center;white-space:nowrap}
+  nav .status small{display:none}
+}
+
+/* ===== 3D 시각화: 위 글자 없이 본문을 꽉 채움 (사이드바는 그대로) ===== */
+body[data-page=view] main{padding:0}
+body[data-page=view] #view>h2,body[data-page=view] .warn{display:none}
+body[data-page=view] #three{height:100vh;min-height:0;border-radius:0}
+
+/* ===== 드론 화면 전체화면 ===== */
+.fs-btn{margin-left:0}
+.fs-bar{display:none}
+.ps-view:fullscreen,.ps-view.fake-fs{max-height:none;aspect-ratio:auto;background:#000}
+.ps-view.fake-fs{position:fixed;inset:0;z-index:100;border-radius:0}
+.ps-view:fullscreen .fs-bar,.ps-view.fake-fs .fs-bar{display:flex;align-items:center;gap:12px;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:5;
+  background:rgba(6,10,36,.78);padding:10px 12px;border:1px solid rgba(255,255,255,.25);border-radius:2px}
+.fs-inspect{min-width:160px;padding:14px 28px;border:2px solid #fff;background:#fff;color:var(--dark);font:inherit;font-size:18px;font-weight:900;border-radius:2px;cursor:pointer}
+.fs-inspect.running{background:var(--dark);color:#fff}
+.fs-inspect:disabled:not(.running){opacity:.45;cursor:not-allowed}
+.fs-bar .inspect-msg{margin:0;min-width:240px}
+.fs-exit{padding:10px 14px;border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;border-radius:2px;cursor:pointer}
+.fs-exit:hover{background:rgba(255,255,255,.15)}
+h2,.hero h2{word-break:keep-all}
+.model-note:not(.warn-note){display:none}
+nav .sub{word-break:keep-all}
+.inspect-msg.ready{background:#eaf1fb;color:#075985}
+.fs-exit{white-space:nowrap;flex-shrink:0}
+.fs-bar .inspect-msg{max-width:380px}
+.fs-inspect{flex-shrink:0}
+
+/* 사이드바 부제목을 뺐으니 제목 아래 간격 */
+nav h1{margin-bottom:18px}
+
+/* ===== 균열 정보: 큰 사진 + 미리보기가 스크롤 없이 한 화면에 ===== */
+.viewer .img{aspect-ratio:16/9;max-height:calc(100vh - 250px);min-height:200px}
+.thumbs{margin-top:10px;gap:8px}
+.thumb{flex-basis:96px}
+.thumb img,.thumb .noimg{aspect-ratio:16/9}
+.thumb .cap{padding:3px 6px;border-top-width:3px}
+
+/* 점검 버튼의 Space 키 표시 */
+kbd{display:inline-block;margin-left:8px;padding:2px 7px;font:700 .65em Consolas,monospace;border:1.5px solid currentColor;border-bottom-width:3px;border-radius:3px;vertical-align:.15em;opacity:.8}
+
+/* ===== 각 화면 왼쪽 위 제목: 3D 시각화 화면 상단 제목(15px)과 같은 크기로 통일 ===== */
+.page>h2{font-size:15px;font-weight:900;letter-spacing:-.01em;line-height:1.3;margin:0 0 14px}
+.site{padding-bottom:10px;margin-bottom:14px}
+.site>b{font-size:15px}
+.site span{font-size:12px}
+@media(max-width:860px){.page>h2{font-size:15px}}
+
+/* ===== 왼쪽 위 제목 30px로 통일 (대시보드·균열 정보·드론 제어·3D 상단 제목) ===== */
+.page>h2{font-size:30px;line-height:1.2;margin:0 0 16px}
+.site{align-items:center;gap:6px 18px;padding-bottom:12px;margin-bottom:16px}
+.site>b{font-size:30px;line-height:1.2}
+.site span{font-size:13px}
+@media(max-width:860px){.page>h2,.site>b{font-size:24px}}
+
+/* 3D 화면 상단 바: 30px 제목이 들어가도록 높이를 늘리고 아래 요소를 내림 */
+.hud-top{height:64px}
+.hud-title{font-size:30px;line-height:1.2}
+.hud-title .sub{font-size:12px}
+.hud-kpis{top:78px}
+.hud-col{top:78px}
+#three.dark .crack-pop{top:78px}
+@container (max-width: 1000px){
+  .hud-kpis{top:70px}
+  .hud-col{top:124px}
+  #three.dark .crack-pop{top:124px}
+}
+@container (max-width: 760px){ .hud-title{font-size:24px} }
+
+/* ===== 역할: 게스트 / 관리자 ===== */
+nav button[hidden]{display:none}
+.role-box{margin-top:auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;text-align:center}
+nav .role-box + .status{margin-top:10px}
+.role-tag{font-size:11px;font-weight:900;padding:4px 2px;border-radius:2px}
+.role-tag.guest{background:rgba(255,255,255,.55);color:#1e3a5f}
+.role-tag.admin{background:var(--dark);color:#4ade80}
+.role-btn{padding:6px 2px;border:1.5px solid var(--dark);background:#fff;color:var(--dark);font:inherit;font-size:11px;font-weight:800;border-radius:2px;cursor:pointer}
+.role-btn:hover{background:var(--dark);color:#fff}
+@media(max-width:860px){
+  .role-box{margin:0 0 0 auto;flex-direction:row;align-items:center}
+  nav .role-box + .status{margin:0 0 0 10px}
+}
+
+/* 관리자 로그인 창 */
+.login-back{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:16px}
+.login-back[hidden]{display:none}
+.login-box{width:min(360px,100%);background:#fff;border-top:6px solid var(--dark);padding:24px;border-radius:2px;box-shadow:0 20px 50px rgba(15,23,42,.35)}
+.login-box h3{margin:0 0 8px;font-size:22px;font-weight:900}
+.login-box p{margin:0 0 16px;font-size:13px;color:var(--sub);font-weight:600;line-height:1.5}
+.login-box input{width:100%;padding:12px;border:2px solid var(--line);border-radius:2px;font:inherit;font-size:15px}
+.login-box input:focus{outline:none;border-color:var(--dark)}
+.login-err{min-height:20px;margin:8px 0 4px;font-size:13px;font-weight:800;color:var(--danger)}
+.login-actions{display:flex;gap:8px}
+.login-actions button{flex:1;padding:12px;font:inherit;font-size:14px;font-weight:800;border-radius:2px;cursor:pointer}
+.login-cancel{background:#fff;border:2px solid var(--dark);color:var(--dark)}
+.login-ok{background:var(--dark);border:2px solid var(--dark);color:#fff}
+.login-ok:disabled{opacity:.5;cursor:wait}
+
+/* ===== 3D 화면 맨 위 글씨 블록: 흰 배경 + 검정 글씨 ===== */
+.hud-top{background:#fff;border-bottom:2px solid var(--dark);color:var(--ink);box-shadow:0 2px 12px rgba(6,10,36,.35)}
+.hud-title b{color:#243394}
+.hud-title .ttl{font-size:22px;font-weight:800;color:#000;vertical-align:.12em}
+.hud-title .sub{color:var(--sub)}
+.hud-meta{color:var(--sub)}
+.hud-meta span{color:var(--ink)}
+#hudClock{color:#243394}
+.hud-top .tmp{background:#fef3c7;color:#92400e;border-color:#f59e0b}
+
+/* ===== 모든 화면 상단 제목 칸을 3D 화면 상단 바와 같은 위치·크기로 =====
+   본문 여백(위 24px, 좌우 28px)을 상쇄해 화면 맨 위·왼쪽 끝에 붙이고, 높이 64px·왼쪽 안쪽 여백 16px로 통일 */
+.page>h2,.site{
+  position:sticky;top:0;z-index:10;
+  display:flex;align-items:center;flex-wrap:nowrap;gap:0 18px;
+  height:64px;margin:-24px -28px 20px;padding:0 16px;
+  background:#fff;border-bottom:2px solid var(--dark);box-shadow:0 2px 12px rgba(6,10,36,.12);
+  white-space:nowrap;overflow:hidden;
+}
+.site span{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:860px){
+  .page>h2,.site{margin:-20px -16px 16px;top:52px}
+}
+
+/* =====================================================================
+   강원대학교(KNU) CI 색상 적용 — 「KNU University Identification Standards」 BS06 전용색상
+   KNU Blue  PANTONE 2728 C  RGB 36·51·148   (메인: 사이드바·버튼·강조)
+   KNU Orange PANTONE 1655 C RGB 254·76·16   (메인: 마크·선택 표시 등 포인트에만)
+   KNU Gray  Cool Gray 11 C (Black 70%)      (보조: 보조 글씨)
+   KNU Silver PANTONE 877 C                  (보조: 구분선)
+   Accent    PANTONE 279 C (하늘) · 2655 C (보라) · 1375 C (주황노랑)
+   ※ 균열 위험도 색(초록·노랑·빨강)은 안전 표시라 그대로 둠
+   ===================================================================== */
+:root{
+  --knu-blue:#243394; --knu-blue-dk:#1a2570; --knu-orange:#fe4c10;
+  --knu-gray:#58595b; --knu-silver:#b3b3b3; --knu-sky:#418fde; --knu-violet:#7766ab; --knu-amber:#ff9e1b;
+  --bg:var(--knu-blue); --dark:var(--knu-blue); --blue:var(--knu-sky);
+  --sub:var(--knu-gray); --line:#d7dae0; --card:#f1f3f8;
+}
+
+/* 사이드바: KNU Blue 배경 + 흰 마크 (BS02 「KNU Blue 배경」 사용 기준) */
+nav{background:var(--knu-blue);color:#fff}
+nav h1.brand{display:flex;flex-direction:column;align-items:center;gap:6px;margin:0 2px 20px}
+nav h1.brand img{width:76px;height:auto;display:block}
+nav h1.brand span{font-size:11px;font-weight:700;letter-spacing:.04em;color:#c9d1f2}
+nav button{color:#fff;position:relative}
+nav button .n{background:transparent;border:1.5px solid rgba(255,255,255,.75);color:#fff}
+nav button:hover{background:rgba(255,255,255,.12)}
+nav button.on{background:#fff;color:var(--knu-blue)}
+nav button.on .n{background:var(--knu-blue);border-color:var(--knu-blue);color:#fff}
+nav button.on::before{content:"";position:absolute;left:-8px;top:8px;bottom:8px;width:4px;background:var(--knu-orange)}  /* 선택 표시: KNU Orange */
+nav .status{color:#fff;border-top-color:rgba(255,255,255,.25)}
+nav .status small{color:#c9d1f2}
+.role-tag.guest{background:rgba(255,255,255,.16);color:#fff}
+.role-tag.admin{background:#fff;color:var(--knu-blue)}
+.role-btn{border-color:#fff;background:#fff;color:var(--knu-blue)}
+.role-btn:hover{background:var(--knu-orange);border-color:var(--knu-orange);color:#fff}
+
+/* 상단 제목 칸: 아래 선 KNU Blue + 얇은 KNU Orange 포인트 */
+.page>h2,.site,.hud-top{border-bottom:2px solid var(--knu-blue);box-shadow:inset 0 -5px 0 -3px var(--knu-orange), 0 2px 12px rgba(6,10,36,.12)}
+.page>h2,.site>b{color:var(--knu-blue)}
+
+/* 위험 균열 없을 때 안내 카드: KNU Blue → 하늘(279 C) */
+.hero:not(.urgent){background:linear-gradient(135deg,var(--knu-blue) 0%,var(--knu-sky) 100%)}
+
+/* 버튼·강조 */
+.inspect-btn.running,.fs-inspect.running,.btns button.running{background:var(--knu-blue);border-color:var(--knu-blue)}
+.pop-more,.login-ok{background:var(--knu-blue);border-color:var(--knu-blue)}
+.login-box{border-top-color:var(--knu-blue)}
+.thumb.on{border-color:var(--knu-orange)}
+a,.ps-addr{color:var(--knu-blue)}
+@media(max-width:860px){ nav h1.brand{display:none} }
+
+/* ===== 3D 화면 상단: 흰 칸 없이 글자만 3D 장면 위에 띄움 (화면 전체를 3D로) ===== */
+.hud-top{background:none !important;border:0 !important;box-shadow:none !important;height:64px}
+.hud-top,.hud-top *{text-shadow:0 1px 3px rgba(0,0,0,.85),0 0 12px rgba(6,10,36,.9)}
+.hud-title b{color:#fff}
+.hud-title .ttl{color:#eaf1fb}
+.hud-title .sub{color:#a9c8f0}
+.hud-meta{color:#cfe0f6}
+.hud-meta span{color:#fff}
+#hudClock{color:#a9c8f0}
+.hud-top .tmp{text-shadow:none}
+/* 좁은 화면에서 숫자 줄도 띠 없이 글자만 */
+@container (max-width: 1000px){ .hud-kpis{background:none;border:0} }
+.kpi span{text-shadow:0 1px 3px rgba(0,0,0,.85)}
+
+/* 균열 위치: 동·층 이름 아래 UE5 좌표를 작게 */
+.xyz{display:block;font-size:11px;font-weight:500;opacity:.65;margin-top:2px}
+
+/* 균열 정보 화면에서는 샘플 데이터 경고 띠를 숨김 (요청) — 대시보드에는 그대로 표시 */
+body[data-page=crack] .warn{display:none!important}
+
+/* 3D 바람 표시 (왼쪽 아래): 화살표 = 지금 보는 각도에서 바람이 흐르는 방향 */
+.wind-legend{position:absolute;left:14px;bottom:44px;z-index:3;display:flex;align-items:center;gap:8px;pointer-events:none;
+  background:rgba(18,23,34,.82);color:#e9edf5;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700}
+.wind-legend[hidden]{display:none}
+.wind-arrow{display:inline-block;font-size:16px;line-height:1;color:#b9cdff;transition:transform .2s}
+.wind-legend.strong{border-color:rgba(245,69,92,.6)} .wind-legend.strong .wind-arrow{color:#ff8c7a}
+
+/* 3D 드론 정보 팝업: 배터리 막대 */
+.pop-bat{display:inline-block;width:70px;height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.pop-bat i{display:block;height:100%}
