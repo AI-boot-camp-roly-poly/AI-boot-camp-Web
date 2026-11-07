@@ -559,6 +559,35 @@ input:focus-visible{outline:none}
   #dash .metric svg.thermo.thermo-h{display:block;width:100%;margin-top:6px}
 }
 
+/* ===== 홈 기상 카드: PC는 좌우 3칸, 모바일은 위아래로 한 장씩 (카드 안은 숫자 왼쪽 · 그림 오른쪽) ===== */
+@media (max-width: 860px){
+  #dash>.grid3{grid-template-columns:1fr;grid-auto-rows:auto;gap:8px}
+  #dash .metric{flex-direction:row;align-items:center;justify-content:space-between;gap:14px;min-height:0;padding:12px 16px}
+  #dash .metric .big{font-size:28px}
+  #dash .metric svg{display:block;width:56px;height:56px;flex-shrink:0}
+  #dash .metric svg.thermo.thermo-h{width:min(200px,58%);height:auto;margin-top:0;flex-shrink:1}
+}
+
+/* ===== 3D 대시보드 카드: PC는 좌우 열, 모바일은 위(위험도·기상) · 아래(순위·최근 탐지) 띠 ===== */
+@media (max-width: 860px){
+  #three .hud-col{display:flex!important;flex-direction:row;gap:6px;left:8px;right:8px;width:auto;bottom:auto}
+  #three .hud-col.left{top:108px}
+  #three .hud-col.right{top:auto;bottom:44px}
+  #three .hud-col .hud-panel{flex:1 1 0;min-width:0;height:118px;overflow:auto;padding:8px 10px;border-radius:8px}
+  #three .hud-panel h4{font-size:12px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #three .hud-panel h4 small{font-size:10px}
+  #three .donut-wrap{gap:6px}
+  #three .donut-wrap svg{width:52px;height:52px;flex-shrink:0}
+  #three .legend3d{font-size:10px;gap:2px}
+  #three .legend3d em{display:none}
+  #three .wx3d{gap:4px}
+  #three .wx3d span{font-size:10px}
+  #three .wx3d b{font-size:15px}
+  #three .wx3d-sub{font-size:10px;margin-top:4px}
+  #three .rank3d,#three .recent3d{font-size:11px}
+  #three .wind-legend{top:72px}
+}
+
 /* ===== 3D 터치 조작 (모바일) ===== */
 #three canvas{touch-action:none}                 /* 손가락 동작을 페이지 스크롤·확대 대신 3D 조작으로 */
 .hint .hint-touch{display:none}
